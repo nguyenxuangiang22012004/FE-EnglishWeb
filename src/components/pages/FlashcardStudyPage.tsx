@@ -34,6 +34,11 @@ export const FlashcardStudyPage: React.FC = () => {
         setIsFlipped(false);
     };
 
+    // 👇 Điều hướng sang trang quiz với setId
+    const handleStartQuiz = (setId: string) => {
+        router.push(`/quiz?setId=${setId}`);
+    };
+
     const handleBackToSets = () => {
         dispatch(selectSet(null));
         setCurrentIndex(0);
@@ -71,7 +76,6 @@ export const FlashcardStudyPage: React.FC = () => {
                 <div className="space-y-6 p-6">
                     <div className="flex items-center justify-between">
                         <h1 className="text-4xl font-bold text-gray-800">📚 Học Flashcard</h1>
-
                         <button
                             onClick={() => setShowCreateModal(true)}
                             className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold flex items-center gap-2 transition"
@@ -82,21 +86,38 @@ export const FlashcardStudyPage: React.FC = () => {
 
                     <p className="text-gray-500">Chọn một bộ flashcard để bắt đầu học:</p>
 
-                    <FlashcardSetList sets={sets} onSelect={handleSelectSet} />
+                    {/* 👇 Truyền thêm onQuiz */}
+                    <FlashcardSetList
+                        sets={sets}
+                        onSelect={handleSelectSet}
+                        onQuiz={handleStartQuiz}
+                    />
                 </div>
             ) : (
                 /* === MÀN HÌNH HỌC FLASHCARD === */
                 <div className="space-y-6 p-6">
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={handleBackToSets}
+                                className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition font-medium text-sm"
+                            >
+                                ← Danh sách bộ
+                            </button>
+                            <h1 className="text-3xl font-bold text-gray-800">
+                                {currentSet.emoji} {currentSet.name}
+                            </h1>
+                        </div>
+
+                        {/* 👇 Nút Quiz ngay trên màn hình học */}
                         <button
-                            onClick={handleBackToSets}
-                            className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition font-medium text-sm"
+                            onClick={() => handleStartQuiz(currentSetId)}
+                            disabled={cards.length < 4}
+                            title={cards.length < 4 ? 'Cần ít nhất 4 từ để làm quiz' : ''}
+                            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold flex items-center gap-2 transition disabled:opacity-40 disabled:cursor-not-allowed"
                         >
-                            ← Danh sách bộ
+                            🎯 Làm Quiz
                         </button>
-                        <h1 className="text-3xl font-bold text-gray-800">
-                            {currentSet.emoji} {currentSet.name}
-                        </h1>
                     </div>
 
                     {cards.length === 0 ? (
