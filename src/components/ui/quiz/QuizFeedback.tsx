@@ -15,7 +15,7 @@ const QuizFeedback: React.FC<QuizFeedbackProps> = ({
 }) => {
     return (
         <div className="space-y-3">
-            <div
+            {/* <div
                 className={`rounded-xl p-4 text-center font-semibold text-lg ${
                     isCorrect ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'
                 }`}
@@ -23,7 +23,7 @@ const QuizFeedback: React.FC<QuizFeedbackProps> = ({
                 {isCorrect
                     ? '🎉 Chính xác!'
                     : `❌ Sai rồi! Đáp án đúng: "${correctOptionLabel}"`}
-            </div>
+            </div> */}
 
             <button
                 onClick={onNext}

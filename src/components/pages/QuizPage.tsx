@@ -173,8 +173,8 @@ export const QuizPage: React.FC = () => {
     const progressPercent = Math.round((currentIndex / questions.length) * 100);
 
     return (
-        <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
-            <div className="max-w-2xl mx-auto space-y-6">
+        <div className="min-h-screen bg-gray-50 px-4 sm:px-6">
+            <div className="max-w-2xl mx-auto space-y-6 -mt-2">
                 <QuizHeader
                     onBack={handleBack}
                     currentSetName={currentSet.name}

@@ -30,14 +30,14 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
         percent >= 90
             ? { emoji: '🏆', label: 'Xuất sắc!', color: 'text-yellow-600 bg-yellow-50 border-yellow-300' }
             : percent >= 70
-            ? { emoji: '🎉', label: 'Tốt lắm!', color: 'text-green-700 bg-green-50 border-green-300' }
-            : percent >= 50
-            ? { emoji: '💪', label: 'Cố lên!', color: 'text-blue-700 bg-blue-50 border-blue-300' }
-            : { emoji: '📚', label: 'Cần ôn thêm', color: 'text-orange-700 bg-orange-50 border-orange-300' };
+                ? { emoji: '🎉', label: 'Tốt lắm!', color: 'text-green-700 bg-green-50 border-green-300' }
+                : percent >= 50
+                    ? { emoji: '💪', label: 'Cố lên!', color: 'text-blue-700 bg-blue-50 border-blue-300' }
+                    : { emoji: '📚', label: 'Cần ôn thêm', color: 'text-orange-700 bg-orange-50 border-orange-300' };
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-6">
-            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 text-center space-y-6">
+        <div className="min-h-screen flex items-center justify-center">
+            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 text-center space-y-6 mb-4">
                 <div className="text-6xl">{grade.emoji}</div>
                 <div>
                     <h1 className="text-3xl font-bold text-gray-800 mb-1">{grade.label}</h1>

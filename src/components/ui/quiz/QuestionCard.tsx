@@ -30,7 +30,7 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
                 )}
             </div>
 
-            <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-4">
                 {question.options.map((option, index) => (
                     <OptionButton
                         key={index}
