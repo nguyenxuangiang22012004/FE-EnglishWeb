@@ -7,9 +7,9 @@ import {
     selectSet,
     setCurrentIndex as reduxSetCurrentIndex,
 } from '@/store/slices/flashcardSlice';
-import { FlashcardCard } from '@/components/ui/FlashcardCard';
-import { FlashcardList } from '@/components/ui/FlashcardList';
-import { FlashcardSetList } from '@/components/ui/FlashcardSetList';
+import { FlashcardCard } from '@/components/ui/flashcard/FlashcardCard';
+import { FlashcardList } from '@/components/ui/flashcard/FlashcardList';
+import { FlashcardSetList } from '@/components/ui/flashcard/FlashcardSetList';
 
 export const FlashcardStudyPage: React.FC = () => {
     const dispatch = useAppDispatch();

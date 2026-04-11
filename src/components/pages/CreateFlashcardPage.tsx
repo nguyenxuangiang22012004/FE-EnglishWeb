@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { CreateFlashcardForm } from '@/components/ui/CreateFlashcardForm';
+import { CreateFlashcardForm } from '@/components/ui/flashcard/CreateFlashcardForm';
 
 export const CreateFlashcardPage: React.FC = () => {
     return (
