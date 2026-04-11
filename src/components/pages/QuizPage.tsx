@@ -131,7 +131,7 @@ export const QuizPage: React.FC = () => {
                 emoji="😕"
                 title="Không tìm thấy bộ flashcard"
                 description="Bộ từ này không tồn tại hoặc đã bị xóa."
-                buttonText="← Về trang chủ"
+                buttonText="Về trang chủ"
                 onButtonClick={handleBack}
             />
         );
@@ -148,7 +148,7 @@ export const QuizPage: React.FC = () => {
                         Cần ít nhất <strong>4 từ</strong> để có đủ đáp án trắc nghiệm.
                     </>
                 }
-                buttonText="← Quay lại"
+                buttonText="Quay lại"
                 onButtonClick={handleBack}
             />
         );

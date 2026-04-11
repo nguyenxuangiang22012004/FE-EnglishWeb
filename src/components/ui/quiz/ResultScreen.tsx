@@ -1,4 +1,5 @@
 import React from 'react';
+import { X } from 'lucide-react';
 
 interface ResultScreenProps {
     score: number;
@@ -36,9 +37,16 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
                     : { emoji: '📚', label: 'Cần ôn thêm', color: 'text-orange-700 bg-orange-50 border-orange-300' };
 
     return (
-        <div className="min-h-screen flex items-center justify-center">
-            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 text-center space-y-6 mb-4">
-                <div className="text-6xl">{grade.emoji}</div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 text-center space-y-6 relative animate-in fade-in zoom-in duration-300">
+                <button
+                    onClick={onBack}
+                    className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition"
+                    title="Quay lại"
+                >
+                    <X size={20} />
+                </button>
+                <div className="text-5xl">{grade.emoji}</div>
                 <div>
                     <h1 className="text-3xl font-bold text-gray-800 mb-1">{grade.label}</h1>
                     <p className="text-gray-500 flex items-center justify-center gap-2">
@@ -98,13 +106,6 @@ const ResultScreen: React.FC<ResultScreenProps> = ({
                             ❌ Làm lại {wrongCount} câu sai
                         </button>
                     )}
-
-                    <button
-                        onClick={onBack}
-                        className="w-full py-3 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition"
-                    >
-                        ← Quay lại bộ từ
-                    </button>
                 </div>
             </div>
         </div>

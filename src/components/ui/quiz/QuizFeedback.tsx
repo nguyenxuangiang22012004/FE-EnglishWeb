@@ -29,7 +29,7 @@ const QuizFeedback: React.FC<QuizFeedbackProps> = ({
                 onClick={onNext}
                 className="w-full py-4 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition text-lg"
             >
-                {isLastQuestion ? '🏁 Xem kết quả' : 'Câu tiếp theo →'}
+                {isLastQuestion ? '🏁 Xem kết quả' : 'Câu tiếp theo'}
             </button>
         </div>
     );

@@ -1,4 +1,5 @@
 import React from 'react';
+import { X } from 'lucide-react';
 
 interface QuizHeaderProps {
     onBack: () => void;
@@ -24,9 +25,10 @@ const QuizHeader: React.FC<QuizHeaderProps> = ({
             <div className="flex items-center justify-between">
                 <button
                     onClick={onBack}
-                    className="flex items-center gap-2 text-gray-500 hover:text-blue-600 transition text-sm font-medium"
+                    className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition"
+                    title="Thoát"
                 >
-                    ← Thoát
+                    <X size={20} />
                 </button>
                 <span className="text-sm font-semibold text-gray-600 flex items-center gap-1.5">
                     {currentSetEmoji} {currentSetName}
