@@ -11,6 +11,7 @@ import QuizEmptyState from '@/components/ui/quiz/QuizEmptyState';
 import QuizHeader from '@/components/ui/quiz/QuizHeader';
 import QuestionCard from '@/components/ui/quiz/QuestionCard';
 import QuizFeedback from '@/components/ui/quiz/QuizFeedback';
+import { useTextToSpeech } from '@/components/hooks/useTextToSpeech';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -53,6 +54,7 @@ export const QuizPage: React.FC = () => {
     const router = useRouter();
     const searchParams = useSearchParams();
     const setId = searchParams.get('setId');
+    const { speak } = useTextToSpeech();
 
     const sets = useAppSelector((state) => state.flashcard.sets);
     const currentSet = sets.find((s) => s.id === setId);
@@ -201,6 +203,7 @@ export const QuizPage: React.FC = () => {
                     selectedAnswer={selectedAnswer}
                     isAnswered={isAnswered}
                     onSelect={handleSelect}
+                    onPlaySound={speak}
                 />
 
                 {isAnswered && (

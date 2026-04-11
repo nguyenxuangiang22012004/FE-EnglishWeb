@@ -10,10 +10,12 @@ import {
 import { FlashcardCard } from '@/components/ui/flashcard/FlashcardCard';
 import { FlashcardList } from '@/components/ui/flashcard/FlashcardList';
 import { FlashcardSetList } from '@/components/ui/flashcard/FlashcardSetList';
+import { useTextToSpeech } from '@/components/hooks/useTextToSpeech';
 
 export const FlashcardStudyPage: React.FC = () => {
     const dispatch = useAppDispatch();
     const router = useRouter();
+    const { speak } = useTextToSpeech();
 
     const sets = useAppSelector((state) => state.flashcard.sets);
     const currentSetId = useAppSelector((state) => state.flashcard.currentSetId);
@@ -137,7 +139,7 @@ export const FlashcardStudyPage: React.FC = () => {
                                         isFlipped={isFlipped}
                                         onFlip={() => setIsFlipped(!isFlipped)}
                                         onFavorite={handleToggleFavorite}
-                                        onPlaySound={() => console.log('Play sound for', currentCard.word)}
+                                        onPlaySound={() => speak(currentCard.word)}
                                     />
 
                                     <div className="flex gap-4 mt-6">
