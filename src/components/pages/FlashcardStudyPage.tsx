@@ -130,10 +130,8 @@ export const FlashcardStudyPage: React.FC = () => {
                                         meaning={currentCard.meaning}
                                         pronunciation={currentCard.pronunciation}
                                         example={currentCard.example ?? 'Chưa có ví dụ cho từ này'}
-                                        isFavorite={favorites.includes(currentCard.id)}
                                         isFlipped={isFlipped}
                                         onFlip={() => setIsFlipped(!isFlipped)}
-                                        onFavorite={handleToggleFavorite}
                                         onPlaySound={() => speak(currentCard.word)}
                                     />
 
