@@ -27,9 +27,6 @@ export const Header: React.FC = () => {
                     <Link href="/ai-lookup" className={`pb-2 ${isActive('/ai-lookup')}`}>
                         🤖 AI Tra Cứu
                     </Link>
-                    <Link href="/quiz" className={`pb-2 ${isActive('/quiz')}`}>
-                        Quiz
-                    </Link>
                     <Link href="/groups" className={`pb-2 ${isActive('/groups')}`}>
                         👥 Nhóm Học
                     </Link>
