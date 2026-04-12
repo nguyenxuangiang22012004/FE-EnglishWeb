@@ -10,7 +10,12 @@ import {
     Space,
     Tooltip,
     Empty,
-    ConfigProvider
+    ConfigProvider,
+    Input,
+    Card,
+    Divider,
+    Dropdown,
+    MenuProps
 } from 'antd';
 import {
     EditOutlined,
@@ -20,158 +25,206 @@ import {
     CheckCircleOutlined,
     BookOutlined,
     CloseCircleOutlined,
-    UnorderedListOutlined
+    UnorderedListOutlined,
+    SaveOutlined,
+    CloseOutlined,
+    AudioOutlined
 } from '@ant-design/icons';
 
 const { Text, Title } = Typography;
+
+// --- Interfaces ---
+export interface Flashcard {
+    id: string;
+    word: string;
+    meaning: string;
+    pronunciation?: string;
+    example?: string;
+    createdAt?: string;
+    status?: 'unknown' | 'learning' | 'mastered';
+    isFavorite?: boolean;
+}
 
 type Status = 'unknown' | 'learning' | 'mastered';
 type FilterStatus = 'all' | Status;
 
 interface FlashcardListProps {
-    cards: Array<{
-        id: string;
-        word: string;
-        meaning: string;
-        isFavorite?: boolean;
-        status?: Status;
-    }>;
-    onSelect?: (id: string) => void;
+    cards: Flashcard[];
     onDelete?: (id: string) => void;
-    onEdit?: (id: string) => void;
+    onUpdate?: (id: string, updatedData: Partial<Flashcard>) => void;
+    onSelect?: (id: string) => void;
     selectedId?: string;
 }
 
 const STATUS_MAP: Record<Status, { label: string; color: string; icon: React.ReactNode }> = {
-    mastered: {
-        label: 'Thuộc',
-        color: 'success',
-        icon: <CheckCircleOutlined />,
-    },
-    learning: {
-        label: 'Đang học',
-        color: 'warning',
-        icon: <BookOutlined />,
-    },
-    unknown: {
-        label: 'Chưa biết',
-        color: 'error',
-        icon: <CloseCircleOutlined />,
-    },
+    mastered: { label: 'Thuộc', color: 'success', icon: <CheckCircleOutlined /> },
+    learning: { label: 'Đang học', color: 'warning', icon: <BookOutlined /> },
+    unknown: { label: 'Chưa biết', color: 'error', icon: <CloseCircleOutlined /> },
 };
 
 export const FlashcardList: React.FC<FlashcardListProps> = ({
     cards,
-    onSelect,
     onDelete,
-    onEdit,
+    onUpdate,
+    onSelect,
     selectedId,
 }) => {
     const [filter, setFilter] = useState<FilterStatus>('all');
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editForm, setEditForm] = useState<Partial<Flashcard>>({});
 
     const filteredCards = filter === 'all'
         ? cards
         : cards.filter(c => (c.status ?? 'unknown') === filter);
 
-    const filterOptions = [
-        { value: 'all', label: 'Tất cả', icon: <UnorderedListOutlined /> },
-        { value: 'unknown', label: 'Chưa biết', icon: <CloseCircleOutlined /> },
-        { value: 'learning', label: 'Đang học', icon: <BookOutlined /> },
-        { value: 'mastered', label: 'Thuộc', icon: <CheckCircleOutlined /> },
-    ];
+    const handleUpdateStatus = (id: string, newStatus: Status) => {
+        onUpdate?.(id, { status: newStatus });
+    };
+
+    const startEditing = (card: Flashcard) => {
+        setEditingId(card.id);
+        setEditForm(card);
+    };
 
     return (
-        <ConfigProvider
-            theme={{
-                token: {
-                    borderRadius: 12,
-                    colorPrimary: '#1677ff',
-                },
-            }}
-        >
+        <ConfigProvider theme={{ token: { borderRadius: 12, colorPrimary: '#1677ff' } }}>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
-                {/* Header */}
-                <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-white">
-                    <Space direction="vertical" size={0}>
-                        <Title level={5} style={{ margin: 0 }}>
-                            {cards.length} từ vựng
-                        </Title>
-                        <Text type="secondary" style={{ fontSize: '12px' }}>
-                            {filteredCards.length} từ đang hiển thị
-                        </Text>
-                    </Space>
 
+                {/* Header */}
+                <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-white sticky top-0 z-10">
+                    <Space direction="vertical" size={0}>
+                        <Title level={5} style={{ margin: 0 }}>{cards.length} từ vựng</Title>
+                        <Text type="secondary" style={{ fontSize: '12px' }}>{filteredCards.length} từ đang hiển thị</Text>
+                    </Space>
                     <Select
                         value={filter}
                         onChange={setFilter}
-                        style={{ width: 140 }}
-                        placeholder="Lọc trạng thái"
+                        style={{ width: 150 }}
                         suffixIcon={<FilterOutlined />}
-                        options={filterOptions.map(opt => ({
-                            label: (
-                                <Space>
-                                    {opt.icon}
-                                    {opt.label}
-                                </Space>
-                            ),
+                        options={[
+                            { value: 'all', label: 'Tất cả', icon: <UnorderedListOutlined /> },
+                            { value: 'unknown', label: 'Chưa biết', icon: <CloseCircleOutlined /> },
+                            { value: 'learning', label: 'Đang học', icon: <BookOutlined /> },
+                            { value: 'mastered', label: 'Thuộc', icon: <CheckCircleOutlined /> },
+                        ].map(opt => ({
+                            label: <Space>{opt.icon}{opt.label}</Space>,
                             value: opt.value
                         }))}
                     />
                 </div>
 
-                {/* List */}
-                <div className="max-h-[500px] overflow-y-auto px-2">
+                {/* List Body */}
+                <div className="max-h-[650px] overflow-y-auto px-3 py-4 bg-gray-50/20">
                     <List
                         dataSource={filteredCards}
-                        locale={{
-                            emptyText: <Empty description="Không có từ nào trong trạng thái này" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                        }}
-                        renderItem={(card: typeof cards[0]) => {
+                        renderItem={(card) => {
+                            const isEditing = editingId === card.id;
                             const status = card.status ?? 'unknown';
                             const config = STATUS_MAP[status];
                             const isSelected = selectedId === card.id;
 
+                            // Menu cho dropdown cập nhật trạng thái
+                            const statusMenu: MenuProps['items'] = (Object.keys(STATUS_MAP) as Status[]).map((key) => ({
+                                key,
+                                label: STATUS_MAP[key].label,
+                                icon: STATUS_MAP[key].icon,
+                                onClick: () => handleUpdateStatus(card.id, key),
+                            }));
+
                             return (
-                                <List.Item
-                                    onClick={() => onSelect?.(card.id)}
-                                    className={`cursor-pointer transition-all duration-200 rounded-xl px-4 my-1 border-transparent hover:bg-gray-50 ${isSelected ? 'bg-blue-50 border-blue-200' : ''
-                                        }`}
-                                    style={{ border: '1px solid transparent' }}
-                                    actions={[
-                                        <Tooltip title="Chỉnh sửa" key="edit">
-                                            <Button
-                                                type="text"
-                                                icon={<EditOutlined />}
-                                                onClick={(e) => { e.stopPropagation(); onEdit?.(card.id); }}
-                                            />
-                                        </Tooltip>,
-                                        <Tooltip title="Xóa" key="delete">
-                                            <Button
-                                                type="text"
-                                                danger
-                                                icon={<DeleteOutlined />}
-                                                onClick={(e) => { e.stopPropagation(); onDelete?.(card.id); }}
-                                            />
-                                        </Tooltip>
-                                    ]}
-                                >
-                                    <List.Item.Meta
-                                        title={
-                                            <Space>
-                                                <Text strong>{card.word}</Text>
-                                                {card.isFavorite && <StarFilled style={{ color: '#faad14' }} />}
-                                                <Tag color={config.color} icon={config.icon} style={{ marginLeft: 8 }}>
-                                                    {config.label}
-                                                </Tag>
+                                <div className="mb-4 transition-all">
+                                    <List.Item
+                                        onClick={() => !isEditing && onSelect?.(card.id)}
+                                        className={`rounded-xl px-5 py-3 border transition-all ${isSelected && !isEditing
+                                            ? 'border-blue-400 bg-white shadow-sm ring-1 ring-blue-100'
+                                            : 'border-gray-100 bg-white shadow-sm hover:border-blue-200'
+                                            }`}
+                                        actions={isEditing ? [] : [
+                                            <Button type="text" size="small" icon={<EditOutlined />} onClick={(e) => { e.stopPropagation(); startEditing(card); }} />,
+                                            <Button type="text" size="small" danger icon={<DeleteOutlined />} onClick={(e) => { e.stopPropagation(); onDelete?.(card.id); }} />
+                                        ]}
+                                        style={{ cursor: isEditing ? 'default' : 'pointer', paddingLeft: '10px' }}
+                                    >
+                                        <List.Item.Meta
+                                            title={
+                                                <div style={{ marginBottom: 4 }}>
+                                                    <Space size="middle" align="center" style={{ display: 'flex', flexWrap: 'wrap' }}>
+                                                        <Text strong style={{ fontSize: '20px', lineHeight: '1.2' }}>{card.word}</Text>
+                                                        {card.pronunciation && (
+                                                            <Text type="secondary" style={{ fontStyle: 'italic', fontSize: '14px' }}>
+                                                                /{card.pronunciation}/
+                                                            </Text>
+                                                        )}
+
+                                                        {/* Clickable Status Tag */}
+                                                        <Dropdown menu={{ items: statusMenu }} trigger={['click']}>
+                                                            <Tag
+                                                                color={config.color}
+                                                                icon={config.icon}
+                                                                className="cursor-pointer hover:opacity-80 transition-opacity"
+                                                                style={{
+                                                                    display: 'inline-flex',
+                                                                    alignItems: 'center',
+                                                                    marginInlineEnd: 0,
+                                                                    padding: '2px 8px',
+                                                                    borderRadius: '6px',
+                                                                    fontWeight: 500
+                                                                }}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            >
+                                                                {config.label}
+                                                            </Tag>
+                                                        </Dropdown>
+
+                                                        {card.isFavorite && <StarFilled style={{ color: '#faad14' }} />}
+                                                    </Space>
+                                                </div>
+                                            }
+                                            description={
+                                                <div className="flex flex-col gap-1">
+                                                    <Text style={{ color: '#d46b08', fontSize: '16px', fontWeight: 500 }}>
+                                                        {card.meaning}
+                                                    </Text>
+                                                    {card.example && !isEditing && (
+                                                        <Text type="secondary" italic style={{ fontSize: '13px' }}>
+                                                            {card.example}
+                                                        </Text>
+                                                    )}
+                                                </div>
+                                            }
+                                        />
+                                    </List.Item>
+
+                                    {/* Edit Panel */}
+                                    {isEditing && (
+                                        <Card
+                                            size="small"
+                                            className="mt-2 border-blue-200 shadow-md bg-white animate-in slide-in-from-top-1"
+                                            extra={<Button type="text" icon={<CloseOutlined />} onClick={() => setEditingId(null)} />}
+                                        >
+                                            <Space direction="vertical" className="w-full" size="middle">
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <Text style={{ fontSize: '12px' }} type="secondary">Từ vựng</Text>
+                                                        <Input value={editForm.word} onChange={e => setEditForm({ ...editForm, word: e.target.value })} />
+                                                    </div>
+                                                    <div>
+                                                        <Text style={{ fontSize: '12px' }} type="secondary">Phiên âm</Text>
+                                                        <Input prefix={<AudioOutlined />} value={editForm.pronunciation} onChange={e => setEditForm({ ...editForm, pronunciation: e.target.value })} />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <Text style={{ fontSize: '12px' }} type="secondary">Nghĩa</Text>
+                                                    <Input value={editForm.meaning} onChange={e => setEditForm({ ...editForm, meaning: e.target.value })} />
+                                                </div>
+                                                <div className="flex justify-end gap-2 pt-2">
+                                                    <Button size="small" onClick={() => setEditingId(null)}>Hủy</Button>
+                                                    <Button size="small" type="primary" icon={<SaveOutlined />} onClick={() => { onUpdate?.(card.id, editForm); setEditingId(null); }}>Lưu</Button>
+                                                </div>
                                             </Space>
-                                        }
-                                        description={
-                                            <Text type="secondary" ellipsis={{ tooltip: card.meaning }}>
-                                                {card.meaning}
-                                            </Text>
-                                        }
-                                    />
-                                </List.Item>
+                                        </Card>
+                                    )}
+                                </div>
                             );
                         }}
                     />
@@ -180,5 +233,3 @@ export const FlashcardList: React.FC<FlashcardListProps> = ({
         </ConfigProvider>
     );
 };
-
-export default FlashcardList;

@@ -36,7 +36,6 @@ export const FlashcardStudyPage: React.FC = () => {
         setIsFlipped(false);
     };
 
-    // 👇 Điều hướng sang trang quiz với setId
     const handleStartQuiz = (setId: string) => {
         router.push(`/quiz?setId=${setId}`);
     };
@@ -70,25 +69,21 @@ export const FlashcardStudyPage: React.FC = () => {
         );
     };
 
-    // ====================== MAIN RETURN ======================
     return (
-        <div className="min-h-screen">
-            {/* === MÀN HÌNH DANH SÁCH BỘ === */}
+        <div className="min-h-screen bg-gray-50/50">
             {!currentSetId || !currentSet ? (
-                <div className="space-y-6 p-6">
+                /* === MÀN HÌNH DANH SÁCH BỘ === */
+                <div className="max-w-6xl mx-auto space-y-6 p-6">
                     <div className="flex items-center justify-between">
                         <h1 className="text-4xl font-bold text-gray-800">📚 Học Flashcard</h1>
                         <button
                             onClick={() => setShowCreateModal(true)}
-                            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold flex items-center gap-2 transition"
+                            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold flex items-center gap-2 transition shadow-md"
                         >
                             ➕ Tạo bộ mới
                         </button>
                     </div>
-
                     <p className="text-gray-500">Chọn một bộ flashcard để bắt đầu học:</p>
-
-                    {/* 👇 Truyền thêm onQuiz */}
                     <FlashcardSetList
                         sets={sets}
                         onSelect={handleSelectSet}
@@ -96,45 +91,45 @@ export const FlashcardStudyPage: React.FC = () => {
                     />
                 </div>
             ) : (
-                /* === MÀN HÌNH HỌC FLASHCARD === */
-                <div className="space-y-6 p-6">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
+                /* === MÀN HÌNH HỌC FLASHCARD (GIAO DIỆN MỚI) === */
+                <div className="max-w-4xl mx-auto space-y-8 p-6">
+                    {/* Header học tập */}
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
                             <button
                                 onClick={handleBackToSets}
                                 className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition font-medium text-sm"
                             >
-                                ← Danh sách bộ
+                                ← Thoát
                             </button>
-                            <h1 className="text-3xl font-bold text-gray-800">
+                            <h1 className="text-2xl font-bold text-gray-800">
                                 {currentSet.emoji} {currentSet.name}
                             </h1>
                         </div>
 
-                        {/* 👇 Nút Quiz ngay trên màn hình học */}
                         <button
                             onClick={() => handleStartQuiz(currentSetId)}
                             disabled={cards.length < 4}
-                            title={cards.length < 4 ? 'Cần ít nhất 4 từ để làm quiz' : ''}
-                            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold flex items-center gap-2 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition disabled:opacity-40 shadow-sm"
                         >
                             🎯 Làm Quiz
                         </button>
                     </div>
 
                     {cards.length === 0 ? (
-                        <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-8 text-center">
-                            <p className="text-yellow-800 text-lg">Bộ này chưa có từ nào. Hãy thêm từ vào!</p>
+                        <div className="bg-white border-2 border-dashed border-gray-300 rounded-2xl p-12 text-center">
+                            <p className="text-gray-500 text-lg">Bộ này hiện đang trống.</p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            <div className="lg:col-span-2">
-                                <div className="bg-white rounded-xl shadow-lg p-6">
+                        <div className="space-y-10">
+                            {/* KHU VỰC THẺ CHÍNH - CĂN GIỮA */}
+                            <div className="flex flex-col items-center">
+                                <div className="w-full max-w-md">
                                     <FlashcardCard
                                         word={currentCard.word}
                                         meaning={currentCard.meaning}
                                         pronunciation={currentCard.pronunciation}
-                                        example={currentCard.example ?? 'Example sentence here'}
+                                        example={currentCard.example ?? 'Chưa có ví dụ cho từ này'}
                                         isFavorite={favorites.includes(currentCard.id)}
                                         isFlipped={isFlipped}
                                         onFlip={() => setIsFlipped(!isFlipped)}
@@ -142,30 +137,37 @@ export const FlashcardStudyPage: React.FC = () => {
                                         onPlaySound={() => speak(currentCard.word)}
                                     />
 
-                                    <div className="flex gap-4 mt-6">
+                                    {/* Nút điều hướng ngay dưới thẻ */}
+                                    <div className="flex items-center gap-4 mt-8">
                                         <button
                                             onClick={handlePrev}
-                                            className="flex-1 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold"
+                                            className="flex-1 py-3 bg-white border border-gray-200 text-gray-700 rounded-2xl hover:bg-gray-50 font-semibold shadow-sm transition"
                                         >
                                             ← Trước
                                         </button>
+                                        <div className="px-4 font-medium text-gray-500">
+                                            {currentIndex + 1} / {cards.length}
+                                        </div>
                                         <button
                                             onClick={handleNext}
-                                            className="flex-1 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                                            className="flex-1 py-3 bg-gray-800 text-white rounded-2xl hover:bg-gray-900 font-semibold shadow-md transition"
                                         >
-                                            Sau →
+                                            Tiếp →
                                         </button>
-                                    </div>
-
-                                    <div className="mt-4 text-center">
-                                        <p className="text-gray-600">
-                                            {currentIndex + 1} / {cards.length}
-                                        </p>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="lg:col-span-1">
+                            <hr className="border-gray-200" />
+
+                            {/* DANH SÁCH TỪ VỰNG XUỐNG DƯỚI */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2 px-2">
+                                    <h2 className="text-xl font-bold text-gray-800">Danh sách từ vựng</h2>
+                                    <span className="bg-gray-200 text-gray-600 px-2 py-0.5 rounded-md text-xs font-bold">
+                                        {cards.length}
+                                    </span>
+                                </div>
                                 <FlashcardList
                                     cards={cards}
                                     selectedId={currentCard.id}
@@ -182,65 +184,38 @@ export const FlashcardStudyPage: React.FC = () => {
                 </div>
             )}
 
-            {/* ====================== MODAL ====================== */}
+            {/* Modal - Giữ nguyên logic cũ */}
             {showCreateModal && (
-                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden">
-                        <div className="px-6 py-5 border-b">
-                            <h2 className="text-2xl font-bold">Tạo bộ flashcard mới</h2>
-                            <p className="text-gray-500 mt-1">Chọn cách tạo bộ bạn muốn</p>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in duration-200">
+                        <div className="px-8 py-6 border-b">
+                            <h2 className="text-2xl font-bold text-gray-800">Tạo bộ mới</h2>
+                            <p className="text-gray-500">Chọn phương thức bạn muốn bắt đầu</p>
                         </div>
-
-                        <div className="p-4 space-y-2">
-                            <button
-                                onClick={() => { setShowCreateModal(false); router.push('/create'); }}
-                                className="w-full flex items-center gap-4 p-5 hover:bg-gray-50 rounded-2xl text-left transition"
-                            >
-                                <div className="text-4xl">✍️</div>
-                                <div>
-                                    <div className="font-semibold text-lg">Tạo thủ công</div>
-                                    <div className="text-sm text-gray-500">Thêm từ vựng từng cái</div>
-                                </div>
-                            </button>
-
-                            <button
-                                onClick={() => { setShowCreateModal(false); router.push('/import'); }}
-                                className="w-full flex items-center gap-4 p-5 hover:bg-gray-50 rounded-2xl text-left transition"
-                            >
-                                <div className="text-4xl">🤖</div>
-                                <div>
-                                    <div className="font-semibold text-lg">Tạo bằng dữ liệu từ AI</div>
-                                    <div className="text-sm text-gray-500">AI tự động sinh bộ theo chủ đề</div>
-                                </div>
-                            </button>
-
-                            <button
-                                onClick={() => { setShowCreateModal(false); router.push('/create/excel'); }}
-                                className="w-full flex items-center gap-4 p-5 hover:bg-gray-50 rounded-2xl text-left transition"
-                            >
-                                <div className="text-4xl">📊</div>
-                                <div>
-                                    <div className="font-semibold text-lg">Import từ Excel</div>
-                                    <div className="text-sm text-gray-500">Tải file .xlsx</div>
-                                </div>
-                            </button>
-
-                            <button
-                                onClick={() => { setShowCreateModal(false); router.push('/create/docs'); }}
-                                className="w-full flex items-center gap-4 p-5 hover:bg-gray-50 rounded-2xl text-left transition"
-                            >
-                                <div className="text-4xl">📄</div>
-                                <div>
-                                    <div className="font-semibold text-lg">Import từ Word/Docs</div>
-                                    <div className="text-sm text-gray-500">Tải file .docx</div>
-                                </div>
-                            </button>
+                        <div className="p-4 grid gap-2">
+                            {[
+                                { title: 'Tạo thủ công', desc: 'Nhập tay từng từ', icon: '✍️', path: '/create' },
+                                { title: 'Tạo bằng AI', desc: 'Tự động sinh từ theo chủ đề', icon: '🤖', path: '/import' },
+                                { title: 'Import từ Excel', desc: 'Tải file .xlsx', icon: '📊', path: '/create/excel' },
+                                { title: 'Import từ Word', desc: 'Tải file .docx', icon: '📄', path: '/create/docs' },
+                            ].map((opt) => (
+                                <button
+                                    key={opt.path}
+                                    onClick={() => { setShowCreateModal(false); router.push(opt.path); }}
+                                    className="w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-left transition group"
+                                >
+                                    <div className="text-3xl bg-gray-100 group-hover:bg-white w-14 h-14 flex items-center justify-center rounded-xl transition">{opt.icon}</div>
+                                    <div>
+                                        <div className="font-bold text-gray-800">{opt.title}</div>
+                                        <div className="text-sm text-gray-500">{opt.desc}</div>
+                                    </div>
+                                </button>
+                            ))}
                         </div>
-
-                        <div className="p-4 border-t bg-gray-50">
+                        <div className="p-4 bg-gray-50 border-t">
                             <button
                                 onClick={() => setShowCreateModal(false)}
-                                className="w-full py-3 text-gray-600 font-medium hover:bg-gray-100 rounded-xl"
+                                className="w-full py-3 text-gray-500 font-semibold hover:text-gray-700 transition"
                             >
                                 Đóng
                             </button>
