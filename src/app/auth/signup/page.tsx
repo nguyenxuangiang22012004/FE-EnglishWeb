@@ -1,4 +1,4 @@
-'use client';
+
 
 import { SignupForm } from '@/components/auth/SignupForm';
 

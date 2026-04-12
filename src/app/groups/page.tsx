@@ -1,4 +1,4 @@
-'use client';
+
 
 import { Header } from '@/components/layouts/Header';
 import { GroupsPage } from '@/components/pages/GroupsPage';

@@ -9,10 +9,6 @@ interface GroupCardProps {
     memberCount: number;
     cardCount: number;
     isOwner?: boolean;
-    onJoin?: () => void;
-    onLeave?: () => void;
-    onEdit?: () => void;
-    onDelete?: () => void;
 }
 
 export const GroupCard: React.FC<GroupCardProps> = ({
@@ -22,11 +18,12 @@ export const GroupCard: React.FC<GroupCardProps> = ({
     memberCount,
     cardCount,
     isOwner = false,
-    onJoin,
-    onLeave,
-    onEdit,
-    onDelete,
 }) => {
+    const handleJoin = () => console.log('Join', id);
+    const handleLeave = () => console.log('Leave', id);
+    const handleEdit = () => console.log('Edit', id);
+    const handleDelete = () => console.log('Delete', id);
+
     return (
         <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col">
             <h3 className="text-xl font-bold text-gray-800 mb-2">{name}</h3>
@@ -47,13 +44,13 @@ export const GroupCard: React.FC<GroupCardProps> = ({
                 {isOwner ? (
                     <>
                         <button
-                            onClick={onEdit}
+                            onClick={handleEdit}
                             className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-semibold"
                         >
                             ✏️ Chỉnh sửa
                         </button>
                         <button
-                            onClick={onDelete}
+                            onClick={handleDelete}
                             className="flex-1 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-semibold"
                         >
                             🗑️ Xóa
@@ -62,13 +59,13 @@ export const GroupCard: React.FC<GroupCardProps> = ({
                 ) : (
                     <>
                         <button
-                            onClick={onJoin}
+                            onClick={handleJoin}
                             className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-semibold"
                         >
                             ➕ Tham gia
                         </button>
                         <button
-                            onClick={onLeave}
+                            onClick={handleLeave}
                             className="flex-1 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm font-semibold"
                         >
                             ➖ Rời nhóm

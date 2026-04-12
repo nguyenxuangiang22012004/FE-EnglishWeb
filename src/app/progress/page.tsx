@@ -1,4 +1,4 @@
-'use client';
+
 
 import { Header } from '@/components/layouts/Header';
 import { ProgressPage } from '@/components/pages/ProgressPage';

@@ -1,4 +1,4 @@
-'use client';
+
 
 import React from 'react';
 import { ProgressChart } from '@/components/ui/ProgressChart';

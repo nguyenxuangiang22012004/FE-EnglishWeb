@@ -1,6 +1,6 @@
 // Export Page Components
 export { Dashboard } from './Dashboard';
-export { FlashcardStudyPage } from './FlashcardStudyPage';
+export { StudySessionClient } from './StudySessionClient';
 export { QuizPage } from './QuizPage';
 export { AILookupPage } from './AILookupPage';
 export { GroupsPage } from './GroupsPage';

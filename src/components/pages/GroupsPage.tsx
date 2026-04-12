@@ -1,4 +1,4 @@
-'use client';
+
 
 import React from 'react';
 import { GroupCard } from '@/components/ui/GroupCard';
@@ -68,10 +68,6 @@ export const GroupsPage: React.FC = () => {
                             memberCount={group.memberCount}
                             cardCount={group.cardCount}
                             isOwner={group.isOwner}
-                            onJoin={() => console.log('Join', group.id)}
-                            onLeave={() => console.log('Leave', group.id)}
-                            onEdit={() => console.log('Edit', group.id)}
-                            onDelete={() => console.log('Delete', group.id)}
                         />
                     ))}
                 </div>

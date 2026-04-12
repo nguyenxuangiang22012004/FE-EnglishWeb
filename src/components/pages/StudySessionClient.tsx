@@ -1,0 +1,168 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAppDispatch, useAppSelector } from '@/store';
+import { selectSet, setCurrentIndex as reduxSetCurrentIndex, FlashcardSet } from '@/store/slices/flashcardSlice';
+import { FlashcardCard } from '@/components/ui/flashcard/FlashcardCard';
+import { FlashcardList } from '@/components/ui/flashcard/FlashcardList';
+import { useTextToSpeech } from '@/components/hooks/useTextToSpeech';
+
+interface StudySessionClientProps {
+    initialSet: FlashcardSet;
+}
+
+export const StudySessionClient: React.FC<StudySessionClientProps> = ({ initialSet }) => {
+    const dispatch = useAppDispatch();
+    const router = useRouter();
+    const { speak } = useTextToSpeech();
+
+    // Since we are hydrating the client with the server-rendered initialSet, 
+    // we want to sync the Redux state so the rest of the app knows what we're studying
+    // but the source of truth for the *current* set is the initialSet prop if we are not modifying it.
+    useEffect(() => {
+        dispatch(selectSet(initialSet.id));
+        return () => {
+            dispatch(selectSet(null));
+        };
+    }, [dispatch, initialSet.id]);
+
+    const reduxCurrentIndex = useAppSelector((state) => state.flashcard.currentIndex);
+
+    const [isFlipped, setIsFlipped] = useState(false);
+    const [favorites, setFavorites] = useState<string[]>([]);
+    const [currentIndex, setCurrentIndex] = useState(reduxCurrentIndex || 0);
+
+    // Keep local state in sync if redux state changes (e.g. from the list click)
+    useEffect(() => {
+        setCurrentIndex(reduxCurrentIndex);
+    }, [reduxCurrentIndex]);
+
+
+    const cards = initialSet.cards ?? [];
+    const currentCard = cards[currentIndex];
+
+    const handleStartQuiz = (setId: string) => {
+        router.push(`/quiz?setId=${setId}`);
+    };
+
+    const handleBackToSets = () => {
+        router.push('/flashcards');
+    };
+
+    const handleNext = () => {
+        const newIndex = (currentIndex + 1) % cards.length;
+        setCurrentIndex(newIndex);
+        dispatch(reduxSetCurrentIndex(newIndex));
+        setIsFlipped(false);
+    };
+
+    const handlePrev = () => {
+        const newIndex = (currentIndex - 1 + cards.length) % cards.length;
+        setCurrentIndex(newIndex);
+        dispatch(reduxSetCurrentIndex(newIndex));
+        setIsFlipped(false);
+    };
+
+    const handleToggleFavorite = () => {
+        if (!currentCard) return;
+        setFavorites((prev) =>
+            prev.includes(currentCard.id)
+                ? prev.filter((id) => id !== currentCard.id)
+                : [...prev, currentCard.id]
+        );
+    };
+
+    return (
+        <div className="max-w-4xl mx-auto space-y-8 p-6">
+            {/* Header học tập */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={handleBackToSets}
+                        className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition font-medium text-sm"
+                    >
+                        ← Thoát
+                    </button>
+                    <h1 className="text-2xl font-bold text-gray-800">
+                        {initialSet.emoji} {initialSet.name}
+                    </h1>
+                </div>
+
+                <button
+                    onClick={() => handleStartQuiz(initialSet.id)}
+                    disabled={cards.length < 4}
+                    className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition disabled:opacity-40 shadow-sm"
+                >
+                    🎯 Làm Quiz
+                </button>
+            </div>
+
+            {cards.length === 0 ? (
+                <div className="bg-white border-2 border-dashed border-gray-300 rounded-2xl p-12 text-center">
+                    <p className="text-gray-500 text-lg">Bộ này hiện đang trống.</p>
+                </div>
+            ) : (
+                <div className="space-y-10">
+                    {/* KHU VỰC THẺ CHÍNH - CĂN GIỮA */}
+                    <div className="flex flex-col items-center">
+                        <div className="w-full max-w-md">
+                            <FlashcardCard
+                                word={currentCard.word}
+                                meaning={currentCard.meaning}
+                                pronunciation={currentCard.pronunciation}
+                                example={currentCard.example ?? 'Chưa có ví dụ cho từ này'}
+                                isFlipped={isFlipped}
+                                onFlip={() => setIsFlipped(!isFlipped)}
+                                onPlaySound={() => speak(currentCard.word)}
+                            />
+
+                            {/* Nút điều hướng ngay dưới thẻ */}
+                            <div className="flex items-center gap-4 mt-8">
+                                <button
+                                    onClick={handlePrev}
+                                    className="flex-1 py-3 bg-white border border-gray-200 text-gray-700 rounded-2xl hover:bg-gray-50 font-semibold shadow-sm transition"
+                                >
+                                    ← Trước
+                                </button>
+                                <div className="px-4 font-medium text-gray-500">
+                                    {currentIndex + 1} / {cards.length}
+                                </div>
+                                <button
+                                    onClick={handleNext}
+                                    className="flex-1 py-3 bg-gray-800 text-white rounded-2xl hover:bg-gray-900 font-semibold shadow-md transition"
+                                >
+                                    Tiếp →
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr className="border-gray-200" />
+
+                    {/* DANH SÁCH TỪ VỰNG XUỐNG DƯỚI */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2 px-2">
+                            <h2 className="text-xl font-bold text-gray-800">Danh sách từ vựng</h2>
+                            <span className="bg-gray-200 text-gray-600 px-2 py-0.5 rounded-md text-xs font-bold">
+                                {cards.length}
+                            </span>
+                        </div>
+                        <FlashcardList
+                            cards={cards}
+                            selectedId={currentCard.id}
+                            onSelect={(id) => {
+                                const index = cards.findIndex((c) => c.id === id);
+                                setCurrentIndex(index);
+                                dispatch(reduxSetCurrentIndex(index));
+                                setIsFlipped(false);
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default StudySessionClient;

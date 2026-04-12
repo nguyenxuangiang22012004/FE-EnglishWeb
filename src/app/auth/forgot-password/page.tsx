@@ -1,4 +1,4 @@
-'use client';
+
 
 import { ForgotPasswordForm } from '@/components/auth/ForgotPasswordForm';
 

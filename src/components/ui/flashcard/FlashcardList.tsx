@@ -140,8 +140,8 @@ export const FlashcardList: React.FC<FlashcardListProps> = ({
                                             : 'border-gray-100 bg-white shadow-sm hover:border-blue-200'
                                             }`}
                                         actions={isEditing ? [] : [
-                                            <Button type="text" size="small" icon={<EditOutlined />} onClick={(e) => { e.stopPropagation(); startEditing(card); }} />,
-                                            <Button type="text" size="small" danger icon={<DeleteOutlined />} onClick={(e) => { e.stopPropagation(); onDelete?.(card.id); }} />
+                                            <Button key="edit" type="text" size="small" icon={<EditOutlined />} onClick={(e) => { e.stopPropagation(); startEditing(card); }} />,
+                                            <Button key="delete" type="text" size="small" danger icon={<DeleteOutlined />} onClick={(e) => { e.stopPropagation(); onDelete?.(card.id); }} />
                                         ]}
                                         style={{ cursor: isEditing ? 'default' : 'pointer', paddingLeft: '10px' }}
                                     >

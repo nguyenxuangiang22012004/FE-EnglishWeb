@@ -1,12 +1,11 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { FlashcardSet } from '@/store/slices/flashcardSlice';
 
 interface FlashcardSetListProps {
     sets: FlashcardSet[];
-    onSelect: (setId: string) => void;
-    onQuiz: (setId: string) => void;
 }
 
 const getProgressStats = (cards: FlashcardSet['cards']) => {
@@ -18,7 +17,17 @@ const getProgressStats = (cards: FlashcardSet['cards']) => {
     return { total, mastered, learning, unknown, percent };
 };
 
-export const FlashcardSetList: React.FC<FlashcardSetListProps> = ({ sets, onSelect, onQuiz }) => {
+export const FlashcardSetList: React.FC<FlashcardSetListProps> = ({ sets }) => {
+    const router = useRouter();
+
+    const handleSelect = (setId: string) => {
+        router.push(`/flashcards/${setId}`);
+    };
+
+    const handleQuiz = (setId: string) => {
+        router.push(`/quiz?setId=${setId}`);
+    };
+
     if (sets.length === 0) {
         return (
             <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-8 text-center">
@@ -42,7 +51,7 @@ export const FlashcardSetList: React.FC<FlashcardSetListProps> = ({ sets, onSele
                         {/* Header — click để học */}
                         <div
                             className="flex items-center gap-3 mb-3 cursor-pointer group"
-                            onClick={() => onSelect(set.id)}
+                            onClick={() => handleSelect(set.id)}
                         >
                             <span className="text-3xl">{set.emoji ?? '📦'}</span>
                             <div className="flex-1 min-w-0">
@@ -76,13 +85,13 @@ export const FlashcardSetList: React.FC<FlashcardSetListProps> = ({ sets, onSele
                         {/* Action buttons */}
                         <div className="grid grid-cols-2 gap-2">
                             <button
-                                onClick={() => onSelect(set.id)}
+                                onClick={() => handleSelect(set.id)}
                                 className="py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
                             >
                                 📖 Học
                             </button>
                             <button
-                                onClick={() => onQuiz(set.id)}
+                                onClick={() => handleQuiz(set.id)}
                                 disabled={total < 4}
                                 title={total < 4 ? 'Cần ít nhất 4 từ để làm quiz' : ''}
                                 className="py-2 text-sm font-semibold text-blue-700 bg-blue-50 border border-blue-300 rounded-lg hover:bg-blue-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
