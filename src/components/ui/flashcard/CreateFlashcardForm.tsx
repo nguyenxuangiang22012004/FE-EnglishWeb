@@ -1,13 +1,12 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
-import { Table, Input, Button, Space, Typography, Popconfirm, Tooltip, message } from 'antd';
+import React, { useState } from 'react';
+import { Table, Input, Button, Space, Typography, Popconfirm, message } from 'antd';
 import {
     PlusOutlined,
     DeleteOutlined,
     SaveOutlined,
-    ClearOutlined,
-    InfoCircleOutlined
+    ClearOutlined
 } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
@@ -15,10 +14,9 @@ const { Title, Text } = Typography;
 interface FlashcardRow {
     id: number;
     word: string;
-    meaning: string;
     pronunciation: string;
+    meaning: string;
     example: string;
-    image: string;
 }
 
 interface CreateFlashcardFormProps {
@@ -26,7 +24,7 @@ interface CreateFlashcardFormProps {
     isLoading?: boolean;
 }
 
-let nextId = Date.now(); // Sử dụng timestamp để tránh trùng lặp id khi render lại
+let nextId = Date.now();
 
 export const CreateFlashcardForm: React.FC<CreateFlashcardFormProps> = ({
     onSubmit,
@@ -35,10 +33,9 @@ export const CreateFlashcardForm: React.FC<CreateFlashcardFormProps> = ({
     const createRow = (): FlashcardRow => ({
         id: nextId++,
         word: '',
-        meaning: '',
         pronunciation: '',
+        meaning: '',
         example: '',
-        image: '',
     });
 
     const [rows, setRows] = useState<FlashcardRow[]>([createRow(), createRow(), createRow()]);
@@ -76,7 +73,7 @@ export const CreateFlashcardForm: React.FC<CreateFlashcardFormProps> = ({
 
     const validCount = rows.filter(r => r.word.trim() && r.meaning.trim()).length;
 
-    // Định nghĩa các cột cho Ant Design Table
+    // Thứ tự cột: Từ -> Phiên âm -> Nghĩa -> Ví dụ
     const columns = [
         {
             title: '#',
@@ -100,18 +97,6 @@ export const CreateFlashcardForm: React.FC<CreateFlashcardFormProps> = ({
             ),
         },
         {
-            title: <span>Nghĩa tiếng Việt <Text type="danger">*</Text></span>,
-            dataIndex: 'meaning',
-            key: 'meaning',
-            render: (text: string, record: FlashcardRow) => (
-                <Input
-                    placeholder="Kiên cường"
-                    value={text}
-                    onChange={(e) => updateField(record.id, 'meaning', e.target.value)}
-                />
-            ),
-        },
-        {
             title: 'Phiên âm',
             dataIndex: 'pronunciation',
             key: 'pronunciation',
@@ -124,6 +109,18 @@ export const CreateFlashcardForm: React.FC<CreateFlashcardFormProps> = ({
             ),
         },
         {
+            title: <span>Nghĩa tiếng Việt <Text type="danger">*</Text></span>,
+            dataIndex: 'meaning',
+            key: 'meaning',
+            render: (text: string, record: FlashcardRow) => (
+                <Input
+                    placeholder="Kiên cường"
+                    value={text}
+                    onChange={(e) => updateField(record.id, 'meaning', e.target.value)}
+                />
+            ),
+        },
+        {
             title: 'Ví dụ',
             dataIndex: 'example',
             key: 'example',
@@ -132,23 +129,6 @@ export const CreateFlashcardForm: React.FC<CreateFlashcardFormProps> = ({
                     placeholder="She is very resilient."
                     value={text}
                     onChange={(e) => updateField(record.id, 'example', e.target.value)}
-                />
-            ),
-        },
-        {
-            title: 'URL hình ảnh',
-            dataIndex: 'image',
-            key: 'image',
-            render: (text: string, record: FlashcardRow) => (
-                <Input
-                    placeholder="https://..."
-                    value={text}
-                    onChange={(e) => updateField(record.id, 'image', e.target.value)}
-                    suffix={
-                        <Tooltip title="Dán link ảnh tại đây">
-                            <InfoCircleOutlined style={{ color: 'rgba(0,0,0,.45)' }} />
-                        </Tooltip>
-                    }
                 />
             ),
         },
@@ -170,7 +150,6 @@ export const CreateFlashcardForm: React.FC<CreateFlashcardFormProps> = ({
 
     return (
         <div style={{ padding: '24px', background: '#fff', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-            {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
                 <div>
                     <Title level={4} style={{ margin: 0 }}>➕ Tạo Flashcard Mới</Title>
@@ -186,7 +165,6 @@ export const CreateFlashcardForm: React.FC<CreateFlashcardFormProps> = ({
                 </Space>
             </div>
 
-            {/* Table */}
             <Table
                 dataSource={rows}
                 columns={columns}
@@ -194,14 +172,13 @@ export const CreateFlashcardForm: React.FC<CreateFlashcardFormProps> = ({
                 pagination={false}
                 bordered
                 size="middle"
-                scroll={{ x: 800 }}
+                scroll={{ x: 700 }}
                 style={{ marginBottom: '20px' }}
             />
 
-            {/* Footer */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '16px', borderTop: '1px solid #f0f0f0' }}>
                 <Text>
-                    Tổng cộng: <Text strong color="blue">{validCount}</Text> từ hợp lệ
+                    Tổng cộng: <Text strong style={{ color: '#1890ff' }}>{validCount}</Text> từ hợp lệ
                 </Text>
                 <Space size="middle">
                     <Popconfirm
@@ -223,7 +200,10 @@ export const CreateFlashcardForm: React.FC<CreateFlashcardFormProps> = ({
                         loading={isLoading}
                         onClick={handleSubmit}
                         disabled={validCount === 0}
-                        style={{ backgroundColor: validCount > 0 ? '#52c41a' : undefined, borderColor: validCount > 0 ? '#52c41a' : undefined }}
+                        style={{
+                            backgroundColor: validCount > 0 ? '#52c41a' : undefined,
+                            borderColor: validCount > 0 ? '#52c41a' : undefined
+                        }}
                     >
                         Lưu {validCount > 0 ? `${validCount} Flashcard` : ''}
                     </Button>
