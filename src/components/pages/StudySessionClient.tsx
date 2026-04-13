@@ -50,7 +50,7 @@ export const StudySessionClient: React.FC<StudySessionClientProps> = ({ initialS
     const currentCard = displayCards[safeIndex];
 
     const handleStartQuiz = (setId: string) => {
-        router.push(`/quiz?setId=${setId}`);
+        router.push(`/quiz?setId=${setId}&filter=${filter}`);
     };
 
     const handleBackToSets = () => {
@@ -100,10 +100,10 @@ export const StudySessionClient: React.FC<StudySessionClientProps> = ({ initialS
 
                 <button
                     onClick={() => handleStartQuiz(initialSet.id)}
-                    disabled={baseCards.length < 4}
+                    disabled={baseCards.length < 4 || displayCards.length === 0}
                     className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition disabled:opacity-40 shadow-sm"
                 >
-                    🎯 Làm Quiz
+                    🎯 Làm Quiz {filter !== 'all' && `(${displayCards.length})`}
                 </button>
             </div>
 

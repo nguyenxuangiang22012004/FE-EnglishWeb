@@ -58,9 +58,14 @@ export const QuizPage: React.FC = () => {
 
     const sets = useAppSelector((state) => state.flashcard.sets);
     const currentSet = sets.find((s) => s.id === setId);
-    const cards = currentSet?.cards ?? [];
+    const fullCards = currentSet?.cards ?? [];
 
-    const [questions, setQuestions] = useState<Question[]>(() => buildQuestions(cards));
+    const filter = searchParams.get('filter') || 'all';
+    const quizCards = filter === 'all' 
+        ? fullCards 
+        : fullCards.filter(c => (c as any).status === filter || (!(c as any).status && filter === 'unknown'));
+
+    const [questions, setQuestions] = useState<Question[]>(() => buildQuestions(quizCards, fullCards));
     const [currentIndex, setCurrentIndex] = useState(0);
     const [selectedAnswer, setSelectedAnswer] = useState<number | undefined>();
     const [isAnswered, setIsAnswered] = useState(false);
@@ -99,7 +104,7 @@ export const QuizPage: React.FC = () => {
     }, [isLastQuestion]);
 
     const handleRetryAll = useCallback(() => {
-        setQuestions(buildQuestions(cards));
+        setQuestions(buildQuestions(quizCards, fullCards));
         setCurrentIndex(0);
         setSelectedAnswer(undefined);
         setIsAnswered(false);
@@ -107,11 +112,11 @@ export const QuizPage: React.FC = () => {
         setWrongCardIds([]);
         setIsFinished(false);
         setIsRetryRound(false);
-    }, [cards]);
+    }, [quizCards, fullCards]);
 
     const handleRetryWrong = useCallback(() => {
-        const wrongCards = cards.filter((c) => wrongCardIds.includes(c.id));
-        setQuestions(buildQuestions(wrongCards, cards));
+        const wrongCards = quizCards.filter((c) => wrongCardIds.includes(c.id));
+        setQuestions(buildQuestions(wrongCards, fullCards));
         setCurrentIndex(0);
         setSelectedAnswer(undefined);
         setIsAnswered(false);
@@ -119,7 +124,7 @@ export const QuizPage: React.FC = () => {
         setWrongCardIds([]);
         setIsFinished(false);
         setIsRetryRound(true);
-    }, [cards, wrongCardIds]);
+    }, [quizCards, fullCards, wrongCardIds]);
 
     const handleBack = useCallback(() => {
         router.push('/');
@@ -139,15 +144,31 @@ export const QuizPage: React.FC = () => {
         );
     }
 
-    if (cards.length < 4) {
+    if (fullCards.length < 4) {
         return (
             <QuizEmptyState
                 emoji="📭"
                 title="Chưa đủ từ để quiz"
                 description={
                     <>
-                        Bộ <strong>{currentSet.name}</strong> chỉ có <strong>{cards.length}</strong> từ.
+                        Bộ <strong>{currentSet.name}</strong> chỉ có <strong>{fullCards.length}</strong> từ.
                         Cần ít nhất <strong>4 từ</strong> để có đủ đáp án trắc nghiệm.
+                    </>
+                }
+                buttonText="Quay lại"
+                onButtonClick={handleBack}
+            />
+        );
+    }
+
+    if (quizCards.length === 0) {
+        return (
+            <QuizEmptyState
+                emoji="📭"
+                title="Không có từ để quiz"
+                description={
+                    <>
+                        Bộ lọc {filter} hiện tại không có từ vựng nào.
                     </>
                 }
                 buttonText="Quay lại"
