@@ -46,7 +46,7 @@ export interface Flashcard {
 }
 
 type Status = 'unknown' | 'learning' | 'mastered';
-type FilterStatus = 'all' | Status;
+export type FilterStatus = 'all' | Status;
 
 interface FlashcardListProps {
     cards: Flashcard[];
@@ -54,6 +54,7 @@ interface FlashcardListProps {
     onUpdate?: (id: string, updatedData: Partial<Flashcard>) => void;
     onSelect?: (id: string) => void;
     selectedId?: string;
+    onFilterChange?: (filter: FilterStatus) => void;
 }
 
 const STATUS_MAP: Record<Status, { label: string; color: string; icon: React.ReactNode }> = {
@@ -68,6 +69,7 @@ export const FlashcardList: React.FC<FlashcardListProps> = ({
     onUpdate,
     onSelect,
     selectedId,
+    onFilterChange,
 }) => {
     const [filter, setFilter] = useState<FilterStatus>('all');
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -98,7 +100,10 @@ export const FlashcardList: React.FC<FlashcardListProps> = ({
                     </Space>
                     <Select
                         value={filter}
-                        onChange={setFilter}
+                        onChange={(val) => {
+                            setFilter(val);
+                            onFilterChange?.(val);
+                        }}
                         style={{ width: 150 }}
                         suffixIcon={<FilterOutlined />}
                         options={[
