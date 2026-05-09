@@ -1,15 +1,10 @@
-
-
-import { Header } from '@/components/layouts/Header';
+import { AppLayout } from '@/components/layouts/AppLayout';
 import { CreateFlashcardPage } from '@/components/pages/CreateFlashcardPage';
 
 export default function Page() {
     return (
-        <>
-            <Header />
-            <main className="max-w-7xl mx-auto px-4 py-8">
-                <CreateFlashcardPage />
-            </main>
-        </>
+        <AppLayout>
+            <CreateFlashcardPage />
+        </AppLayout>
     );
 }

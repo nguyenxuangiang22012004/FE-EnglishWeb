@@ -1,32 +1,15 @@
 import React from 'react';
 
-interface QuizEmptyStateProps {
-    emoji: string;
-    title: string;
-    description: string | React.ReactNode;
-    buttonText: string;
-    onButtonClick: () => void;
-}
+interface QuizEmptyStateProps { emoji: string; title: string; description: React.ReactNode; buttonText: string; onButtonClick: () => void; }
 
-const QuizEmptyState: React.FC<QuizEmptyStateProps> = ({
-    emoji,
-    title,
-    description,
-    buttonText,
-    onButtonClick,
-}) => {
+const QuizEmptyState: React.FC<QuizEmptyStateProps> = ({ emoji, title, description, buttonText, onButtonClick }) => {
     return (
-        <div className="min-h-screen flex items-center justify-center p-6">
-            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 text-center space-y-4">
-                <div className="text-5xl">{emoji}</div>
-                <h2 className="text-2xl font-bold text-gray-800">{title}</h2>
-                <div className="text-gray-500">{description}</div>
-                <button
-                    onClick={onButtonClick}
-                    className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition"
-                >
-                    {buttonText}
-                </button>
+        <div className="min-h-screen bg-surface-900 flex items-center justify-center px-4">
+            <div className="glass-card p-10 text-center max-w-md w-full animate-fadeInScale">
+                <div className="text-6xl mb-4">{emoji}</div>
+                <h2 className="text-2xl font-display font-bold text-slate-200 mb-3">{title}</h2>
+                <p className="text-slate-400 mb-6">{description}</p>
+                <button onClick={onButtonClick} className="px-8 py-3 bg-gradient-to-r from-accent-indigo to-accent-indigo-light text-white rounded-xl font-semibold glow-btn">{buttonText}</button>
             </div>
         </div>
     );

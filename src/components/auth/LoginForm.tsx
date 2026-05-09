@@ -45,13 +45,6 @@ export const LoginForm: React.FC = () => {
             }
 
             // TODO: Call login API
-            // const response = await fetch('/api/auth/login', {
-            //   method: 'POST',
-            //   headers: { 'Content-Type': 'application/json' },
-            //   body: JSON.stringify(formData),
-            // });
-
-            // For now, simulate success
             console.log('Login attempt:', formData);
             alert('✅ Đăng nhập thành công!');
 
@@ -66,19 +59,26 @@ export const LoginForm: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4 py-12">
-            <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
+        <div className="min-h-screen bg-surface-900 mesh-bg flex items-center justify-center px-4 py-12 relative">
+            {/* Decorative blobs */}
+            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-accent-indigo/8 rounded-full blur-[120px] animate-float" />
+            <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-accent-emerald/6 rounded-full blur-[100px] animate-float" style={{ animationDelay: '2s' }} />
+
+            <div className="glass-card p-8 w-full max-w-md relative z-10 animate-fadeInScale">
                 {/* Header */}
                 <div className="text-center mb-8">
-                    <h1 className="text-4xl font-bold text-gray-800 mb-2">🎓 Học Tiếng Anh</h1>
-                    <p className="text-gray-600">Đăng nhập để tiếp tục</p>
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-accent-indigo to-accent-emerald flex items-center justify-center text-2xl mx-auto mb-4 shadow-lg shadow-accent-indigo/20">
+                        🎓
+                    </div>
+                    <h1 className="text-3xl font-display font-bold gradient-text mb-2">Học Tiếng Anh</h1>
+                    <p className="text-slate-400">Đăng nhập để tiếp tục</p>
                 </div>
 
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="space-y-5">
                     {/* Email */}
                     <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        <label className="block text-sm font-semibold text-slate-300 mb-2">
                             📧 Email
                         </label>
                         <input
@@ -87,13 +87,13 @@ export const LoginForm: React.FC = () => {
                             value={formData.email}
                             onChange={handleChange}
                             placeholder="your@email.com"
-                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition"
+                            className="w-full px-4 py-3 glass-input"
                         />
                     </div>
 
                     {/* Password */}
                     <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        <label className="block text-sm font-semibold text-slate-300 mb-2">
                             🔐 Mật khẩu
                         </label>
                         <input
@@ -102,7 +102,7 @@ export const LoginForm: React.FC = () => {
                             value={formData.password}
                             onChange={handleChange}
                             placeholder="••••••••"
-                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 transition"
+                            className="w-full px-4 py-3 glass-input"
                         />
                     </div>
 
@@ -114,13 +114,13 @@ export const LoginForm: React.FC = () => {
                                 name="rememberMe"
                                 checked={formData.rememberMe}
                                 onChange={handleChange}
-                                className="w-4 h-4 rounded"
+                                className="w-4 h-4 rounded bg-white/5 border-white/10 text-accent-indigo focus:ring-accent-indigo/30"
                             />
-                            <span className="text-sm text-gray-700">Nhớ tôi</span>
+                            <span className="text-sm text-slate-400">Nhớ tôi</span>
                         </label>
                         <Link
                             href="/auth/forgot-password"
-                            className="text-sm text-blue-600 hover:text-blue-800 font-semibold"
+                            className="text-sm text-accent-indigo-light hover:text-accent-indigo font-medium transition-colors"
                         >
                             Quên mật khẩu?
                         </Link>
@@ -128,7 +128,7 @@ export const LoginForm: React.FC = () => {
 
                     {/* Error Message */}
                     {error && (
-                        <div className="bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded-lg text-sm">
+                        <div className="bg-accent-rose/10 border border-accent-rose/20 text-accent-rose px-4 py-3 rounded-xl text-sm">
                             {error}
                         </div>
                     )}
@@ -137,7 +137,7 @@ export const LoginForm: React.FC = () => {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-bold hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full py-3.5 bg-gradient-to-r from-accent-indigo to-accent-indigo-light text-white rounded-xl font-bold glow-btn disabled:opacity-50 disabled:cursor-not-allowed text-sm tracking-wide"
                     >
                         {loading ? '⏳ Đang xử lý...' : '✅ Đăng Nhập'}
                     </button>
@@ -146,23 +146,23 @@ export const LoginForm: React.FC = () => {
                 {/* Divider */}
                 <div className="my-6 relative">
                     <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-gray-300"></div>
+                        <div className="w-full border-t border-white/[0.06]"></div>
                     </div>
                     <div className="relative flex justify-center text-sm">
-                        <span className="px-2 bg-white text-gray-500">Chưa có tài khoản?</span>
+                        <span className="px-3 bg-surface-800/80 text-slate-500 text-xs">Chưa có tài khoản?</span>
                     </div>
                 </div>
 
                 {/* Sign Up Link */}
                 <Link
                     href="/auth/signup"
-                    className="block text-center py-3 border-2 border-blue-500 text-blue-600 rounded-lg font-bold hover:bg-blue-50 transition"
+                    className="block text-center py-3 border border-accent-indigo/30 text-accent-indigo-light rounded-xl font-bold hover:bg-accent-indigo/5 transition-all text-sm"
                 >
                     📝 Tạo Tài Khoản Mới
                 </Link>
 
                 {/* Footer */}
-                <p className="text-center text-xs text-gray-500 mt-6">
+                <p className="text-center text-xs text-slate-600 mt-6">
                     By continuing, you agree to our Terms of Service and Privacy Policy
                 </p>
             </div>

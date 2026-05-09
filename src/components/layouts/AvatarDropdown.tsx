@@ -39,111 +39,145 @@ export const AvatarDropdown: React.FC = () => {
             .toUpperCase();
     };
 
+    const menuItems = [
+        {
+            label: 'Hồ sơ của tôi',
+            icon: '👤',
+            onClick: () => {
+                setIsOpen(false);
+                alert('Chức năng Hồ sơ sẽ được cập nhật');
+            },
+        },
+        {
+            label: 'Flashcard của tôi',
+            icon: '📚',
+            href: '/flashcards',
+        },
+        {
+            label: 'Nhóm học của tôi',
+            icon: '👥',
+            href: '/groups',
+        },
+        {
+            label: 'Thống kê học tập',
+            icon: '📊',
+            href: '/progress',
+        },
+    ];
+
+    const secondaryItems = [
+        {
+            label: 'Cài đặt',
+            icon: '⚙️',
+            onClick: () => {
+                setIsOpen(false);
+                alert('Chức năng Cài đặt sẽ được cập nhật');
+            },
+        },
+        {
+            label: 'Trợ giúp & hỗ trợ',
+            icon: '❓',
+            onClick: () => {
+                setIsOpen(false);
+                alert('Trung tâm trợ giúp sẽ được cập nhật');
+            },
+        },
+    ];
+
     return (
-        <div className="relative" ref={dropdownRef}>
+        <div className="relative w-full" ref={dropdownRef}>
             {/* Avatar Button */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold flex items-center justify-center hover:shadow-lg transition hover:scale-105 focus:outline-none"
+                className="w-full flex items-center gap-3 p-3 rounded-[14px] border border-white/[0.05] bg-white/[0.02] hover:bg-white/[0.04] cursor-pointer transition-colors text-left focus:outline-none"
                 title={userName}
             >
-                {getInitials(userName)}
+                <div className="w-10 h-10 rounded-full bg-accent-cyan flex items-center justify-center text-white font-bold text-lg flex-shrink-0 shadow-inner">
+                    {getInitials(userName)}
+                </div>
+                <div className="flex-1 min-w-0">
+                    <div className="text-[15px] font-semibold text-slate-100 truncate flex items-center justify-between">
+                        {userName}
+                        <svg className={`w-4 h-4 text-slate-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-0.5">
+                        <div className="w-3.5 h-3.5 rounded-full border border-slate-500 flex items-center justify-center">
+                            <span className="text-[8px]">👤</span>
+                        </div>
+                        Miễn phí
+                    </div>
+                </div>
             </button>
 
             {/* Dropdown Menu */}
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 z-50 overflow-hidden">
+                <div className="absolute bottom-full mb-2 left-0 w-full glass-card overflow-hidden animate-slideUp shadow-2xl shadow-black/40 z-50">
                     {/* User Info */}
-                    <div className="bg-gradient-to-r from-blue-50 to-purple-50 px-4 py-4 border-b">
+                    <div className="px-4 py-4 border-b border-white/[0.06] bg-gradient-to-r from-accent-indigo/10 to-purple-600/10">
                         <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white flex items-center justify-center font-bold text-lg">
+                            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-accent-indigo to-purple-600 text-white flex items-center justify-center font-bold text-sm shadow-lg">
                                 {getInitials(userName)}
                             </div>
-                            <div className="flex-1">
-                                <p className="font-bold text-gray-800 text-sm">{userName}</p>
-                                <p className="text-gray-600 text-xs">{userEmail}</p>
+                            <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-slate-100 text-sm truncate">{userName}</p>
+                                <p className="text-slate-400 text-xs truncate">{userEmail}</p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Menu Items */}
-                    <div className="py-2">
-                        {/* Profile */}
-                        <button
-                            onClick={() => {
-                                setIsOpen(false);
-                                alert('Chức năng Hồ sơ sẽ được cập nhật');
-                            }}
-                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 transition flex items-center gap-3"
-                        >
-                            <span className="text-lg">👤</span>
-                            <span>Hồ sơ của tôi</span>
-                        </button>
+                    {/* Primary Menu Items */}
+                    <div className="py-1.5">
+                        {menuItems.map((item) =>
+                            item.href ? (
+                                <Link
+                                    key={item.label}
+                                    href={item.href}
+                                    onClick={() => setIsOpen(false)}
+                                    className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:text-white hover:bg-white/[0.05] transition-colors flex items-center gap-3"
+                                >
+                                    <span className="text-base">{item.icon}</span>
+                                    <span>{item.label}</span>
+                                </Link>
+                            ) : (
+                                <button
+                                    key={item.label}
+                                    onClick={item.onClick}
+                                    className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:text-white hover:bg-white/[0.05] transition-colors flex items-center gap-3"
+                                >
+                                    <span className="text-base">{item.icon}</span>
+                                    <span>{item.label}</span>
+                                </button>
+                            )
+                        )}
+                    </div>
 
-                        {/* My Flashcards */}
-                        <Link
-                            href="/flashcards"
-                            onClick={() => setIsOpen(false)}
-                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 transition flex items-center gap-3 block"
-                        >
-                            <span className="text-lg">📚</span>
-                            <span>Flashcard của tôi</span>
-                        </Link>
+                    <div className="border-t border-white/[0.06]" />
 
-                        {/* My Groups */}
-                        <Link
-                            href="/groups"
-                            onClick={() => setIsOpen(false)}
-                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 transition flex items-center gap-3 block"
-                        >
-                            <span className="text-lg">👥</span>
-                            <span>Nhóm học của tôi</span>
-                        </Link>
+                    {/* Secondary Items */}
+                    <div className="py-1.5">
+                        {secondaryItems.map((item) => (
+                            <button
+                                key={item.label}
+                                onClick={item.onClick}
+                                className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:text-white hover:bg-white/[0.05] transition-colors flex items-center gap-3"
+                            >
+                                <span className="text-base">{item.icon}</span>
+                                <span>{item.label}</span>
+                            </button>
+                        ))}
+                    </div>
 
-                        {/* Statistics */}
-                        <Link
-                            href="/progress"
-                            onClick={() => setIsOpen(false)}
-                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 transition flex items-center gap-3 block"
-                        >
-                            <span className="text-lg">📊</span>
-                            <span>Thống kê học tập</span>
-                        </Link>
+                    <div className="border-t border-white/[0.06]" />
 
-                        <hr className="my-2" />
-
-                        {/* Settings */}
-                        <button
-                            onClick={() => {
-                                setIsOpen(false);
-                                alert('Chức năng Cài đặt sẽ được cập nhật');
-                            }}
-                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 transition flex items-center gap-3"
-                        >
-                            <span className="text-lg">⚙️</span>
-                            <span>Cài đặt</span>
-                        </button>
-
-                        {/* Help */}
-                        <button
-                            onClick={() => {
-                                setIsOpen(false);
-                                alert('Trung tâm trợ giúp sẽ được cập nhật');
-                            }}
-                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 transition flex items-center gap-3"
-                        >
-                            <span className="text-lg">❓</span>
-                            <span>Trợ giúp & hỗ trợ</span>
-                        </button>
-
-                        <hr className="my-2" />
-
-                        {/* Logout */}
+                    {/* Logout */}
+                    <div className="py-1.5">
                         <button
                             onClick={handleLogout}
-                            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition flex items-center gap-3 font-semibold"
+                            className="w-full px-4 py-2.5 text-left text-sm text-accent-rose hover:bg-accent-rose/10 transition-colors flex items-center gap-3 font-medium"
                         >
-                            <span className="text-lg">🚪</span>
+                            <span className="text-base">🚪</span>
                             <span>Đăng xuất</span>
                         </button>
                     </div>

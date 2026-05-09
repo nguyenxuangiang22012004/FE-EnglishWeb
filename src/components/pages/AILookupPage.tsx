@@ -40,7 +40,7 @@ export const AILookupPage: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-4xl font-bold text-gray-800">🤖 Tra Cứu AI Từ Vựng</h1>
+            <h1 className="text-3xl font-display font-bold text-slate-100">🤖 Tra Cứu AI Từ Vựng</h1>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2">
@@ -48,26 +48,26 @@ export const AILookupPage: React.FC = () => {
                 </div>
 
                 {/* Tips */}
-                <div className="bg-blue-50 rounded-xl shadow-lg p-6 border border-blue-200">
-                    <h3 className="text-lg font-bold text-blue-900 mb-4">💡 Mẹo sử dụng</h3>
-                    <ul className="space-y-2 text-sm text-blue-800">
-                        <li>✅ Gõ từ tiếng Anh cần tra cứu</li>
-                        <li>✅ AI sẽ cung cấp định nghĩa, ví dụ</li>
-                        <li>✅ Nhấn &quot;Thêm vào Flashcard&quot; để lưu</li>
-                        <li>✅ Từ sẽ được thêm vào collection hiện tại</li>
+                <div className="glass-card p-6 border border-accent-indigo/20 bg-gradient-to-br from-accent-indigo/5 to-transparent h-fit">
+                    <h3 className="text-lg font-display font-bold text-accent-indigo-light mb-4">💡 Mẹo sử dụng</h3>
+                    <ul className="space-y-2.5 text-sm text-slate-300">
+                        <li className="flex items-start gap-2"><span className="text-accent-emerald mt-0.5">✦</span> Gõ từ tiếng Anh cần tra cứu</li>
+                        <li className="flex items-start gap-2"><span className="text-accent-emerald mt-0.5">✦</span> AI sẽ cung cấp định nghĩa, ví dụ</li>
+                        <li className="flex items-start gap-2"><span className="text-accent-emerald mt-0.5">✦</span> Nhấn &quot;Thêm vào Flashcard&quot; để lưu</li>
+                        <li className="flex items-start gap-2"><span className="text-accent-emerald mt-0.5">✦</span> Từ sẽ được thêm vào collection hiện tại</li>
                     </ul>
                 </div>
             </div>
 
             {/* Recent Searches */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-                <h3 className="text-lg font-bold text-gray-800 mb-4">🕐 Tìm kiếm gần đây</h3>
+            <div className="glass-card p-6">
+                <h3 className="text-lg font-display font-bold text-slate-200 mb-4">🕐 Tìm kiếm gần đây</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {['amazing', 'beautiful', 'courage', 'determination'].map((word) => (
                         <button
                             key={word}
                             onClick={() => handleSearch(word)}
-                            className="p-3 bg-gray-100 rounded-lg hover:bg-blue-100 text-gray-700 font-semibold transition"
+                            className="p-3 bg-white/[0.04] border border-white/[0.06] rounded-xl hover:bg-white/[0.08] hover:border-accent-indigo/20 text-slate-300 font-medium transition-all text-sm"
                         >
                             {word}
                         </button>

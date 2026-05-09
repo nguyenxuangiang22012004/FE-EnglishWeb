@@ -1,16 +1,13 @@
 import { Suspense } from 'react';
-import { Header } from '@/components/layouts/Header';
+import { AppLayout } from '@/components/layouts/AppLayout';
 import { QuizPage } from '@/components/pages/QuizPage';
 
 export default function Page() {
     return (
-        <>
-            <Header />
-            <main className="max-w-7xl mx-auto px-4 py-8">
-                <Suspense fallback={<div>Loading quiz...</div>}>
-                    <QuizPage />
-                </Suspense>
-            </main>
-        </>
+        <AppLayout>
+            <Suspense fallback={<div>Loading quiz...</div>}>
+                <QuizPage />
+            </Suspense>
+        </AppLayout>
     );
 }
