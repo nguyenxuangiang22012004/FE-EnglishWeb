@@ -32,7 +32,7 @@ export const Sidebar: React.FC = () => {
         {
             title: 'THƯ VIỆN',
             items: [
-                { href: '/dashboard', label: 'Thư viện của bạn', icon: <ListIcon size={18} /> },
+                // { href: '/dashboard', label: 'Thư viện của bạn', icon: <ListIcon size={18} /> },
                 { href: '/create', label: 'Tạo thư mục mới', icon: <Star size={18} /> },
                 { href: '/import', label: 'Import từ vựng', icon: <Mic size={18} /> },
             ]
@@ -89,8 +89,8 @@ export const Sidebar: React.FC = () => {
                                             key={item.label}
                                             href={item.href}
                                             className={`flex items-center gap-3.5 px-3 py-2.5 rounded-[14px] transition-all duration-200 font-medium ${active
-                                                    ? 'bg-white/[0.08] text-white shadow-sm'
-                                                    : 'text-slate-300 hover:bg-white/[0.04] hover:text-white'
+                                                ? 'bg-white/[0.08] text-white shadow-sm'
+                                                : 'text-slate-300 hover:bg-white/[0.04] hover:text-white'
                                                 }`}
                                         >
                                             <span className={active ? 'text-accent-indigo-light' : 'text-slate-400'}>

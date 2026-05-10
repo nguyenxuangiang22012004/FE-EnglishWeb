@@ -26,6 +26,10 @@ instance.interceptors.response.use(
     if (error.response?.status === 401) {
       // Handle unauthorized
       localStorage.removeItem('token');
+      // Force redirect to login page
+      if (typeof window !== 'undefined') {
+        window.location.href = '/auth/login';
+      }
     }
     return Promise.reject(error);
   }

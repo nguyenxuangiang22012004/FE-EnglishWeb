@@ -2,9 +2,15 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
+import { Dropdown, MenuProps, Modal } from 'antd';
+import { MoreOutlined, EditOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { FlashcardSet } from '@/store/slices/flashcardSlice';
 
-interface FlashcardSetListProps { sets: FlashcardSet[]; }
+interface FlashcardSetListProps { 
+    sets: FlashcardSet[]; 
+    onEdit?: (set: FlashcardSet) => void;
+    onDelete?: (setId: string) => void;
+}
 
 const getProgressStats = (cards: FlashcardSet['cards']) => {
     const total = cards.length;
@@ -15,10 +21,24 @@ const getProgressStats = (cards: FlashcardSet['cards']) => {
     return { total, mastered, learning, unknown, percent };
 };
 
-export const FlashcardSetList: React.FC<FlashcardSetListProps> = ({ sets }) => {
+export const FlashcardSetList: React.FC<FlashcardSetListProps> = ({ sets, onEdit, onDelete }) => {
     const router = useRouter();
     const handleSelect = (setId: string) => { router.push(`/flashcards/${setId}`); };
     const handleQuiz = (setId: string) => { router.push(`/quiz?setId=${setId}`); };
+
+    const confirmDelete = (setId: string, setName: string) => {
+        Modal.confirm({
+            title: 'Xóa bộ flashcard',
+            icon: <ExclamationCircleOutlined />,
+            content: `Bạn có chắc chắn muốn xóa bộ "${setName}"? Hành động này không thể hoàn tác.`,
+            okText: 'Xóa',
+            okType: 'danger',
+            cancelText: 'Hủy',
+            onOk() {
+                onDelete?.(setId);
+            },
+        });
+    };
 
     if (sets.length === 0) {
         return (
@@ -35,11 +55,29 @@ export const FlashcardSetList: React.FC<FlashcardSetListProps> = ({ sets }) => {
             {sets.map((set) => {
                 const { total, mastered, learning, unknown, percent } = getProgressStats(set.cards);
                 return (
-                    <div key={set.id} className="glass-card-hover p-5">
+                    <div key={set.id} className="glass-card-hover p-5 relative group/card">
+                        {/* More Menu */}
+                        <div className="absolute top-4 right-4 z-10">
+                            <Dropdown
+                                menu={{
+                                    items: [
+                                        { key: 'edit', label: 'Chỉnh sửa', icon: <EditOutlined />, onClick: () => onEdit?.(set) },
+                                        { key: 'delete', label: 'Xóa', icon: <DeleteOutlined />, danger: true, onClick: () => confirmDelete(set.id, set.name) },
+                                    ],
+                                }}
+                                trigger={['click']}
+                                placement="bottomRight"
+                            >
+                                <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 text-slate-400 hover:text-slate-100 transition-all opacity-0 group-hover/card:opacity-100">
+                                    <MoreOutlined style={{ fontSize: '18px' }} />
+                                </button>
+                            </Dropdown>
+                        </div>
+
                         <div className="flex items-center gap-3 mb-3 cursor-pointer group" onClick={() => handleSelect(set.id)}>
                             <span className="text-3xl">{set.emoji ?? '📦'}</span>
                             <div className="flex-1 min-w-0">
-                                <h3 className="font-display font-bold text-slate-200 truncate group-hover:text-accent-indigo-light transition-colors">{set.name}</h3>
+                                <h3 className="font-display font-bold text-slate-200 truncate group-hover:text-accent-indigo-light transition-colors pr-6">{set.name}</h3>
                                 {set.description && <p className="text-xs text-slate-500 truncate mt-0.5">{set.description}</p>}
                             </div>
                         </div>
