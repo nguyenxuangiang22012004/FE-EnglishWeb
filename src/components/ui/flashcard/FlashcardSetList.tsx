@@ -3,13 +3,14 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Dropdown, MenuProps, Modal } from 'antd';
-import { MoreOutlined, EditOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { MoreOutlined, EditOutlined, DeleteOutlined, ExclamationCircleOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import { FlashcardSet } from '@/store/slices/flashcardSlice';
 
 interface FlashcardSetListProps { 
     sets: FlashcardSet[]; 
     onEdit?: (set: FlashcardSet) => void;
     onDelete?: (setId: string) => void;
+    onViewDetails?: (set: FlashcardSet) => void;
 }
 
 const getProgressStats = (cards: FlashcardSet['cards']) => {
@@ -21,9 +22,16 @@ const getProgressStats = (cards: FlashcardSet['cards']) => {
     return { total, mastered, learning, unknown, percent };
 };
 
-export const FlashcardSetList: React.FC<FlashcardSetListProps> = ({ sets, onEdit, onDelete }) => {
+export const FlashcardSetList: React.FC<FlashcardSetListProps> = ({ sets, onEdit, onDelete, onViewDetails }) => {
     const router = useRouter();
-    const handleSelect = (setId: string) => { router.push(`/flashcards/${setId}`); };
+    const handleSelect = (set: FlashcardSet) => { 
+        if (onViewDetails) {
+            onViewDetails(set);
+        } else {
+            router.push(`/flashcards/${set.id}`); 
+        }
+    };
+    const handleStudy = (setId: string) => { router.push(`/flashcards/${setId}`); };
     const handleQuiz = (setId: string) => { router.push(`/quiz?setId=${setId}`); };
 
     const confirmDelete = (setId: string, setName: string) => {
@@ -61,6 +69,8 @@ export const FlashcardSetList: React.FC<FlashcardSetListProps> = ({ sets, onEdit
                             <Dropdown
                                 menu={{
                                     items: [
+                                        { key: 'view', label: 'Xem danh sách', icon: <UnorderedListOutlined />, onClick: () => onViewDetails?.(set) },
+                                        { type: 'divider' },
                                         { key: 'edit', label: 'Chỉnh sửa', icon: <EditOutlined />, onClick: () => onEdit?.(set) },
                                         { key: 'delete', label: 'Xóa', icon: <DeleteOutlined />, danger: true, onClick: () => confirmDelete(set.id, set.name) },
                                     ],
@@ -74,7 +84,7 @@ export const FlashcardSetList: React.FC<FlashcardSetListProps> = ({ sets, onEdit
                             </Dropdown>
                         </div>
 
-                        <div className="flex items-center gap-3 mb-3 cursor-pointer group" onClick={() => handleSelect(set.id)}>
+                        <div className="flex items-center gap-3 mb-3 cursor-pointer group" onClick={() => handleSelect(set)}>
                             <span className="text-3xl">{set.emoji ?? '📦'}</span>
                             <div className="flex-1 min-w-0">
                                 <h3 className="font-display font-bold text-slate-200 truncate group-hover:text-accent-indigo-light transition-colors pr-6">{set.name}</h3>
@@ -93,7 +103,7 @@ export const FlashcardSetList: React.FC<FlashcardSetListProps> = ({ sets, onEdit
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
-                            <button onClick={() => handleSelect(set.id)} className="py-2 text-sm font-medium text-slate-300 bg-white/[0.04] border border-white/[0.08] rounded-xl hover:bg-white/[0.08] transition">📖 Học</button>
+                            <button onClick={() => handleStudy(set.id)} className="py-2 text-sm font-medium text-slate-300 bg-white/[0.04] border border-white/[0.08] rounded-xl hover:bg-white/[0.08] transition">📖 Học</button>
                             <button onClick={() => handleQuiz(set.id)} disabled={total < 4} title={total < 4 ? 'Cần ít nhất 4 từ' : ''} className="py-2 text-sm font-semibold text-accent-indigo-light bg-accent-indigo/10 border border-accent-indigo/20 rounded-xl hover:bg-accent-indigo/15 transition disabled:opacity-40 disabled:cursor-not-allowed">🎯 Quiz</button>
                         </div>
                         {total < 4 && <p className="text-xs text-slate-600 text-center mt-2">Cần ít nhất 4 từ để làm quiz</p>}
