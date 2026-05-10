@@ -1,5 +1,5 @@
 import axios from '@/config/axios';
-import { AuthCredentials, AuthResponse } from '@/types/auth';
+import { AuthCredentials, AuthResponse, RegisterPayload } from '@/types/auth';
 
 // Auth Service
 export const authService = {
@@ -8,8 +8,8 @@ export const authService = {
     return response.data;
   },
 
-  register: async (credentials: AuthCredentials): Promise<AuthResponse> => {
-    const response = await axios.post('/auth/register', credentials);
+  register: async (payload: RegisterPayload): Promise<AuthResponse> => {
+    const response = await axios.post('/auth/register', payload);
     return response.data;
   },
 

@@ -12,6 +12,14 @@ export interface AuthCredentials {
   password: string;
 }
 
+/** Payload POST /auth/register — field `name` khớp User.name trên backend */
+export interface RegisterPayload {
+  email: string;
+  password: string;
+  confirmPassword: string;
+  name: string;
+}
+
 export interface AuthResponse {
   token: string;
   user: User;

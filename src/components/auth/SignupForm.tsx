@@ -3,13 +3,15 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import axios from 'axios';
+
+import authService from '@/services/authService';
 
 interface SignupFormData {
     fullName: string;
     email: string;
     password: string;
     confirmPassword: string;
-    agreeTerms: boolean;
 }
 
 export const SignupForm: React.FC = () => {
@@ -18,19 +20,24 @@ export const SignupForm: React.FC = () => {
         email: '',
         password: '',
         confirmPassword: '',
-        agreeTerms: false,
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const router = useRouter();
 
+    const getRegisterErrorMessage = (err: unknown): string => {
+        if (axios.isAxiosError(err)) {
+            const data = err.response?.data as { message?: string; error?: string };
+            if (typeof data?.message === 'string') return data.message;
+            if (typeof data?.error === 'string') return data.error;
+        }
+        return 'Lỗi đăng ký. Vui lòng thử lại.';
+    };
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value, type, checked } = e.target;
-        setFormData((prev) => ({
-            ...prev,
-            [name]: type === 'checkbox' ? checked : value,
-        }));
+        const { name, value } = e.target;
+        setFormData((prev) => ({ ...prev, [name]: value }));
         setError('');
     };
 
@@ -60,21 +67,20 @@ export const SignupForm: React.FC = () => {
                 return;
             }
 
-            if (!formData.agreeTerms) {
-                setError('Vui lòng đồng ý với Điều khoản dịch vụ');
-                setLoading(false);
-                return;
-            }
+            const data = await authService.register({
+                name: formData.fullName.trim(),
+                email: formData.email.trim(),
+                password: formData.password,
+                confirmPassword: formData.confirmPassword,
+            });
 
-            // TODO: Call signup API
-            console.log('Signup attempt:', formData);
             setSuccess('✅ Đăng ký thành công! Chuyển hướng đến đăng nhập...');
 
             setTimeout(() => {
                 router.push('/auth/login');
             }, 2000);
         } catch (err) {
-            setError('Lỗi đăng ký. Vui lòng thử lại.');
+            setError(getRegisterErrorMessage(err));
             console.error(err);
         } finally {
             setLoading(false);
@@ -160,27 +166,6 @@ export const SignupForm: React.FC = () => {
                         />
                     </div>
 
-                    {/* Terms Checkbox */}
-                    <label className="flex items-start gap-2 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            name="agreeTerms"
-                            checked={formData.agreeTerms}
-                            onChange={handleChange}
-                            className="w-4 h-4 rounded mt-0.5 flex-shrink-0 bg-white/5 border-white/10 text-accent-indigo focus:ring-accent-indigo/30"
-                        />
-                        <span className="text-sm text-slate-400">
-                            Tôi đồng ý với{' '}
-                            <Link href="#" className="text-accent-indigo-light hover:text-accent-indigo font-medium transition-colors">
-                                Điều khoản dịch vụ
-                            </Link>{' '}
-                            và{' '}
-                            <Link href="#" className="text-accent-indigo-light hover:text-accent-indigo font-medium transition-colors">
-                                Chính sách bảo mật
-                            </Link>
-                        </span>
-                    </label>
-
                     {/* Error Message */}
                     {error && (
                         <div className="bg-accent-rose/10 border border-accent-rose/20 text-accent-rose px-4 py-3 rounded-xl text-sm">
@@ -222,11 +207,6 @@ export const SignupForm: React.FC = () => {
                 >
                     🔐 Đăng Nhập
                 </Link>
-
-                {/* Footer */}
-                <p className="text-center text-xs text-slate-600 mt-6">
-                    By continuing, you agree to our Terms of Service and Privacy Policy
-                </p>
             </div>
         </div>
     );
