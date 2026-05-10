@@ -24,7 +24,7 @@ const toLocalSet = (apiSet: FlashcardSetResponse): FlashcardSet => ({
         pronunciation: card.pronunciation,
         example: card.example,
         createdAt: card.createdAt,
-        status: 'unknown' as const,
+        status: (card.status || 'unknown').toLowerCase() as any,
     })),
 });
 
@@ -59,6 +59,22 @@ export const FlashcardsClientPage: React.FC = () => {
             }
         } catch (err: any) {
             alert(err?.response?.data?.message || 'Không thể xóa bộ từ.');
+        }
+    };
+
+    const handleStatusChange = async (cardId: string, newStatus: string) => {
+        if (!viewingSet) return;
+        setViewingSet(prev => {
+            if (!prev) return null;
+            return {
+                ...prev,
+                cards: prev.cards.map(c => c.id === cardId ? { ...c, status: newStatus as any } : c)
+            };
+        });
+        try {
+            await flashcardService.updateCardProgress(cardId, newStatus.toUpperCase() as any);
+        } catch (error) {
+            console.error('Failed to update status', error);
         }
     };
 
@@ -103,6 +119,7 @@ export const FlashcardsClientPage: React.FC = () => {
                             { id: 'mock-2', word: 'Flashcard', meaning: 'Thẻ ghi nhớ', pronunciation: '/ˈflæʃkɑːrd/', status: 'learning', example: 'Flashcards are great for learning.' },
                             { id: 'mock-3', word: 'Study', meaning: 'Học tập', pronunciation: '/ˈstʌdi/', status: 'unknown', example: 'I need to study for the exam.' },
                         ]} 
+                        onUpdate={(id, data) => { if (data.status) handleStatusChange(id, data.status); }}
                     />
                 </div>
             ) : (

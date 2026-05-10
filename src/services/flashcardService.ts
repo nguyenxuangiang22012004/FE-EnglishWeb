@@ -21,6 +21,7 @@ export interface FlashcardCardResponse {
     pronunciation?: string;
     example?: string;
     createdAt: string;
+    status: 'UNKNOWN' | 'LEARNING' | 'MASTERED';
 }
 
 export interface FlashcardSetResponse {

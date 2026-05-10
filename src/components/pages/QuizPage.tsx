@@ -11,6 +11,7 @@ import QuizHeader from '@/components/ui/quiz/QuizHeader';
 import QuestionCard from '@/components/ui/quiz/QuestionCard';
 import QuizFeedback from '@/components/ui/quiz/QuizFeedback';
 import { useTextToSpeech } from '@/components/hooks/useTextToSpeech';
+import flashcardService from '@/services/flashcardService';
 
 function shuffle<T>(arr: T[]): T[] { return [...arr].sort(() => Math.random() - 0.5); }
 
@@ -75,8 +76,14 @@ export const QuizPage: React.FC = () => {
         if (isAnswered || !question) return;
         setSelectedAnswer(index);
         setIsAnswered(true);
-        if (index === question.correctIndex) { setScore((s) => s + 1); }
-        else { setWrongCardIds((prev) => prev.includes(question.cardId) ? prev : [...prev, question.cardId]); }
+        if (index === question.correctIndex) { 
+            setScore((s) => s + 1); 
+            flashcardService.updateCardProgress(question.cardId, 'LEARNING').catch(console.error);
+        }
+        else { 
+            setWrongCardIds((prev) => prev.includes(question.cardId) ? prev : [...prev, question.cardId]); 
+            flashcardService.updateCardProgress(question.cardId, 'UNKNOWN').catch(console.error);
+        }
     }, [isAnswered, question]);
 
     const handleNext = useCallback(() => {

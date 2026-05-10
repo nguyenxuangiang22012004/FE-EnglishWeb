@@ -113,6 +113,7 @@ export const StudySessionClient: React.FC<StudySessionClientProps> = ({ initialS
                         <FlashcardList cards={baseCards} selectedId={currentCard?.id}
                             onSelect={(id) => { const index = displayCards.findIndex((c) => c.id === id); if (index !== -1) { setCurrentIndex(index); dispatch(reduxSetCurrentIndex(index)); setIsFlipped(false); } }}
                             onFilterChange={(newFilter) => { setFilter(newFilter); setCurrentIndex(0); dispatch(reduxSetCurrentIndex(0)); }}
+                            onUpdate={(id, data) => { if (data.status) handleStatusChange(id, data.status as any); }}
                         />
                     </div>
                 </div>

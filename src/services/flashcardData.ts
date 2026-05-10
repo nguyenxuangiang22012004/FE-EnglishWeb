@@ -17,7 +17,7 @@ const toLocalSet = (apiSet: FlashcardSetResponse): FlashcardSet => ({
         pronunciation: card.pronunciation,
         example: card.example,
         createdAt: card.createdAt,
-        status: 'unknown' as const, // default — will be updated by progress API
+        status: (card.status || 'unknown').toLowerCase() as any,
     })),
 });
 
