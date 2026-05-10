@@ -4,6 +4,9 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppDispatch } from '@/store';
+import authService from '@/services/authService';
+import { setToken, setUser } from '@/store/slices/authSlice';
+import axios from 'axios';
 
 interface LoginFormData {
     email: string;
@@ -21,6 +24,15 @@ export const LoginForm: React.FC = () => {
     const [error, setError] = useState('');
     const router = useRouter();
     const dispatch = useAppDispatch();
+
+    const getLoginErrorMessage = (err: unknown): string => {
+        if (axios.isAxiosError(err)) {
+            const data = err.response?.data as { message?: string; error?: string };
+            if (typeof data?.message === 'string') return data.message;
+            if (typeof data?.error === 'string') return data.error;
+        }
+        return 'Lỗi đăng nhập. Vui lòng thử lại.';
+    };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value, type, checked } = e.target;
@@ -44,14 +56,29 @@ export const LoginForm: React.FC = () => {
                 return;
             }
 
-            // TODO: Call login API
-            console.log('Login attempt:', formData);
-            alert('✅ Đăng nhập thành công!');
+            // Call login API
+            const response = await authService.login({
+                email: formData.email.trim(),
+                password: formData.password,
+            });
 
-            // Redirect to dashboard
-            router.push('/dashboard');
+            // Store token and user info
+            if (response.success && response.data.accessToken) {
+                const token = response.data.accessToken;
+                localStorage.setItem('token', token);
+                dispatch(setToken(token));
+                
+                if (response.data.user) {
+                    dispatch(setUser(response.data.user));
+                }
+
+                // Redirect to dashboard
+                router.push('/dashboard');
+            } else if (response.message) {
+                setError(response.message);
+            }
         } catch (err) {
-            setError('Lỗi đăng nhập. Vui lòng thử lại.');
+            setError(getLoginErrorMessage(err));
             console.error(err);
         } finally {
             setLoading(false);
