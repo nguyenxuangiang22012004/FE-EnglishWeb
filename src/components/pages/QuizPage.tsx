@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAppSelector } from '@/store';
+import { FlashcardSet } from '@/store/slices/flashcardSlice';
+import { getFlashcardSetById } from '@/services/flashcardData';
 import { Question } from '@/types/quiz';
 import ResultScreen from '@/components/ui/quiz/ResultScreen';
 import QuizEmptyState from '@/components/ui/quiz/QuizEmptyState';
@@ -30,14 +31,13 @@ export const QuizPage: React.FC = () => {
     const router = useRouter();
     const searchParams = useSearchParams();
     const setId = searchParams.get('setId');
-    const { speak } = useTextToSpeech();
-    const sets = useAppSelector((state) => state.flashcard.sets);
-    const currentSet = sets.find((s) => s.id === setId);
-    const fullCards = currentSet?.cards ?? [];
     const filter = searchParams.get('filter') || 'all';
-    const quizCards = filter === 'all' ? fullCards : fullCards.filter(c => (c as any).status === filter || (!(c as any).status && filter === 'unknown'));
+    const { speak } = useTextToSpeech();
 
-    const [questions, setQuestions] = useState<Question[]>(() => buildQuestions(quizCards, fullCards));
+    const [currentSet, setCurrentSet] = useState<FlashcardSet | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const [questions, setQuestions] = useState<Question[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [selectedAnswer, setSelectedAnswer] = useState<number | undefined>();
     const [isAnswered, setIsAnswered] = useState(false);
@@ -46,11 +46,33 @@ export const QuizPage: React.FC = () => {
     const [isFinished, setIsFinished] = useState(false);
     const [isRetryRound, setIsRetryRound] = useState(false);
 
+    useEffect(() => {
+        const fetchSet = async () => {
+            if (!setId) {
+                setIsLoading(false);
+                return;
+            }
+            setIsLoading(true);
+            const data = await getFlashcardSetById(setId);
+            if (data) {
+                setCurrentSet(data);
+                const fullCards = data.cards ?? [];
+                const quizCards = filter === 'all' ? fullCards : fullCards.filter(c => (c as any).status === filter || (!(c as any).status && filter === 'unknown'));
+                setQuestions(buildQuestions(quizCards, fullCards));
+            }
+            setIsLoading(false);
+        };
+        fetchSet();
+    }, [setId, filter]);
+
+    const fullCards = currentSet?.cards ?? [];
+    const quizCards = filter === 'all' ? fullCards : fullCards.filter(c => (c as any).status === filter || (!(c as any).status && filter === 'unknown'));
+
     const question = questions[currentIndex];
     const isLastQuestion = currentIndex === questions.length - 1;
 
     const handleSelect = useCallback((index: number) => {
-        if (isAnswered) return;
+        if (isAnswered || !question) return;
         setSelectedAnswer(index);
         setIsAnswered(true);
         if (index === question.correctIndex) { setScore((s) => s + 1); }
@@ -64,11 +86,20 @@ export const QuizPage: React.FC = () => {
 
     const handleRetryAll = useCallback(() => { setQuestions(buildQuestions(quizCards, fullCards)); setCurrentIndex(0); setSelectedAnswer(undefined); setIsAnswered(false); setScore(0); setWrongCardIds([]); setIsFinished(false); setIsRetryRound(false); }, [quizCards, fullCards]);
     const handleRetryWrong = useCallback(() => { const wrongCards = quizCards.filter((c) => wrongCardIds.includes(c.id)); setQuestions(buildQuestions(wrongCards, fullCards)); setCurrentIndex(0); setSelectedAnswer(undefined); setIsAnswered(false); setScore(0); setWrongCardIds([]); setIsFinished(false); setIsRetryRound(true); }, [quizCards, fullCards, wrongCardIds]);
-    const handleBack = useCallback(() => { router.push('/'); }, [router]);
+    const handleBack = useCallback(() => { router.push('/flashcards'); }, [router]);
+
+    if (isLoading) {
+        return (
+            <div className="flex justify-center items-center min-h-screen bg-surface-900">
+                <div className="w-8 h-8 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+                <span className="ml-3 text-slate-400">Đang tải câu hỏi...</span>
+            </div>
+        );
+    }
 
     if (!currentSet) return <QuizEmptyState emoji="😕" title="Không tìm thấy bộ flashcard" description="Bộ từ này không tồn tại hoặc đã bị xóa." buttonText="Về trang chủ" onButtonClick={handleBack} />;
     if (fullCards.length < 4) return <QuizEmptyState emoji="📭" title="Chưa đủ từ để quiz" description={<>Bộ <strong>{currentSet.name}</strong> chỉ có <strong>{fullCards.length}</strong> từ. Cần ít nhất <strong>4 từ</strong>.</>} buttonText="Quay lại" onButtonClick={handleBack} />;
-    if (quizCards.length === 0) return <QuizEmptyState emoji="📭" title="Không có từ để quiz" description={<>Bộ lọc {filter} hiện tại không có từ vựng nào.</>} buttonText="Quay lại" onButtonClick={handleBack} />;
+    if (quizCards.length === 0 || questions.length === 0) return <QuizEmptyState emoji="📭" title="Không có từ để quiz" description={<>Bộ lọc {filter} hiện tại không có từ vựng nào.</>} buttonText="Quay lại" onButtonClick={handleBack} />;
     if (isFinished) return <ResultScreen score={score} total={questions.length} wrongCardIds={wrongCardIds} setName={currentSet.name} setEmoji={currentSet.emoji ?? '📦'} isRetryRound={isRetryRound} onRetryAll={handleRetryAll} onRetryWrong={handleRetryWrong} onBack={handleBack} />;
 
     const progressPercent = Math.round((currentIndex / questions.length) * 100);
@@ -81,8 +112,8 @@ export const QuizPage: React.FC = () => {
                     <span className="text-sm font-semibold px-3 py-1.5 bg-accent-rose/10 text-accent-rose rounded-xl">❌ {wrongCardIds.length} sai</span>
                     <span className="text-sm font-semibold px-3 py-1.5 bg-accent-emerald/10 text-accent-emerald rounded-xl">✅ {score} đúng</span>
                 </div>
-                <QuestionCard currentIndex={currentIndex} question={question} selectedAnswer={selectedAnswer} isAnswered={isAnswered} onSelect={handleSelect} onPlaySound={speak} />
-                {isAnswered && <QuizFeedback isCorrect={selectedAnswer === question.correctIndex} correctOptionLabel={question.options[question.correctIndex]} isLastQuestion={isLastQuestion} onNext={handleNext} />}
+                {question && <QuestionCard currentIndex={currentIndex} question={question} selectedAnswer={selectedAnswer} isAnswered={isAnswered} onSelect={handleSelect} onPlaySound={speak} />}
+                {isAnswered && question && <QuizFeedback isCorrect={selectedAnswer === question.correctIndex} correctOptionLabel={question.options[question.correctIndex]} isLastQuestion={isLastQuestion} onNext={handleNext} />}
             </div>
         </div>
     );
