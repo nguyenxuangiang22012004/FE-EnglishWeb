@@ -86,6 +86,11 @@ export const flashcardService = {
         const res = await axios.delete(`/flashcards/sets/${setId}/cards/${cardId}`);
         return res.data;
     },
+
+    updateCardProgress: async (cardId: string, status: 'UNKNOWN' | 'LEARNING' | 'MASTERED'): Promise<ApiResponse<any>> => {
+        const res = await axios.put(`/flashcards/cards/${cardId}/progress`, { status });
+        return res.data;
+    },
 };
 
 export default flashcardService;

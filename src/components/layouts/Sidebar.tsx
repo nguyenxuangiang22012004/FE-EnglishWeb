@@ -25,18 +25,18 @@ export const Sidebar: React.FC = () => {
             title: 'HỌC TẬP',
             items: [
                 { href: '/flashcards', label: 'Thẻ ghi nhớ', icon: <BookOpen size={18} /> },
-                { href: '/quiz', label: 'Bài kiểm tra thử', icon: <MessageCircle size={18} /> },
+                { href: '/import', label: 'Import từ vựng', icon: <Mic size={18} /> },
                 { href: '/ai-lookup', label: 'AI Tra cứu', icon: <Library size={18} /> },
             ]
         },
-        {
-            title: 'THƯ VIỆN',
-            items: [
-                // { href: '/dashboard', label: 'Thư viện của bạn', icon: <ListIcon size={18} /> },
-                // { href: '/create', label: 'Tạo thư mục mới', icon: <Star size={18} /> },
-                { href: '/import', label: 'Import từ vựng', icon: <Mic size={18} /> },
-            ]
-        },
+        // {
+        //     title: 'THƯ VIỆN',
+        //     items: [
+        //         // { href: '/dashboard', label: 'Thư viện của bạn', icon: <ListIcon size={18} /> },
+        //         // { href: '/create', label: 'Tạo thư mục mới', icon: <Star size={18} /> },
+        //         { href: '/import', label: 'Import từ vựng', icon: <Mic size={18} /> },
+        //     ]
+        // },
         {
             title: 'CỘNG ĐỒNG & TIẾN ĐỘ',
             items: [

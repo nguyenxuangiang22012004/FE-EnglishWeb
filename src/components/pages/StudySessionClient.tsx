@@ -7,6 +7,7 @@ import { selectSet, setCurrentIndex as reduxSetCurrentIndex, FlashcardSet } from
 import { FlashcardCard } from '@/components/ui/flashcard/FlashcardCard';
 import { FlashcardList, FilterStatus } from '@/components/ui/flashcard/FlashcardList';
 import { useTextToSpeech } from '@/components/hooks/useTextToSpeech';
+import flashcardService from '@/services/flashcardService';
 
 interface StudySessionClientProps {
     initialSet: FlashcardSet;
@@ -27,10 +28,12 @@ export const StudySessionClient: React.FC<StudySessionClientProps> = ({ initialS
     const [favorites, setFavorites] = useState<string[]>([]);
     const [currentIndex, setCurrentIndex] = useState(reduxCurrentIndex || 0);
     const [filter, setFilter] = useState<FilterStatus>('all');
+    const [localCards, setLocalCards] = useState(initialSet.cards ?? []);
 
     useEffect(() => { setCurrentIndex(reduxCurrentIndex); }, [reduxCurrentIndex]);
+    useEffect(() => { setLocalCards(initialSet.cards ?? []); }, [initialSet.cards]);
 
-    const baseCards = initialSet.cards ?? [];
+    const baseCards = localCards;
     const displayCards = filter === 'all' ? baseCards : baseCards.filter(c => (c.status ?? 'unknown') === filter);
     const safeIndex = displayCards.length > 0 && currentIndex < displayCards.length ? currentIndex : 0;
     const currentCard = displayCards[safeIndex];
@@ -40,6 +43,15 @@ export const StudySessionClient: React.FC<StudySessionClientProps> = ({ initialS
     const handleNext = () => { if (displayCards.length === 0) return; const newIndex = (safeIndex + 1) % displayCards.length; setCurrentIndex(newIndex); dispatch(reduxSetCurrentIndex(newIndex)); setIsFlipped(false); };
     const handlePrev = () => { if (displayCards.length === 0) return; const newIndex = (safeIndex - 1 + displayCards.length) % displayCards.length; setCurrentIndex(newIndex); dispatch(reduxSetCurrentIndex(newIndex)); setIsFlipped(false); };
     const handleToggleFavorite = () => { if (!currentCard) return; setFavorites((prev) => prev.includes(currentCard.id) ? prev.filter((id) => id !== currentCard.id) : [...prev, currentCard.id]); };
+
+    const handleStatusChange = async (cardId: string, newStatus: 'unknown' | 'learning' | 'mastered') => {
+        setLocalCards(prev => prev.map(c => c.id === cardId ? { ...c, status: newStatus } : c));
+        try {
+            await flashcardService.updateCardProgress(cardId, newStatus.toUpperCase() as any);
+        } catch (error) {
+            console.error('Failed to update status', error);
+        }
+    };
 
     return (
         <div className="max-w-4xl mx-auto space-y-8 p-6">
@@ -67,7 +79,17 @@ export const StudySessionClient: React.FC<StudySessionClientProps> = ({ initialS
                     <div className="flex flex-col items-center">
                         {currentCard ? (
                             <div className="w-full max-w-md">
-                                <FlashcardCard word={currentCard.word} meaning={currentCard.meaning} pronunciation={currentCard.pronunciation} example={currentCard.example ?? 'Chưa có ví dụ cho từ này'} isFlipped={isFlipped} onFlip={() => setIsFlipped(!isFlipped)} onPlaySound={() => speak(currentCard.word)} />
+                                <FlashcardCard 
+                                    word={currentCard.word} 
+                                    meaning={currentCard.meaning} 
+                                    pronunciation={currentCard.pronunciation} 
+                                    example={currentCard.example ?? 'Chưa có ví dụ cho từ này'} 
+                                    isFlipped={isFlipped} 
+                                    status={currentCard.status as 'unknown' | 'learning' | 'mastered'}
+                                    onFlip={() => setIsFlipped(!isFlipped)} 
+                                    onPlaySound={() => speak(currentCard.word)} 
+                                    onStatusChange={(status) => handleStatusChange(currentCard.id, status)}
+                                />
                                 <div className="flex items-center gap-4 mt-8">
                                     <button onClick={handlePrev} className="flex-1 py-3 bg-white/[0.04] border border-white/[0.08] text-slate-300 rounded-2xl hover:bg-white/[0.08] font-semibold transition">← Trước</button>
                                     <div className="px-4 font-medium text-slate-500">{displayCards.length > 0 ? safeIndex + 1 : 0} / {displayCards.length}</div>
