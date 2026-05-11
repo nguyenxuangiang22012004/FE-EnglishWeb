@@ -80,6 +80,7 @@ export const StudySessionClient: React.FC<StudySessionClientProps> = ({ initialS
                         {currentCard ? (
                             <div className="w-full max-w-md">
                                 <FlashcardCard 
+                                    key={currentCard.id}
                                     word={currentCard.word} 
                                     meaning={currentCard.meaning} 
                                     pronunciation={currentCard.pronunciation} 
@@ -89,6 +90,7 @@ export const StudySessionClient: React.FC<StudySessionClientProps> = ({ initialS
                                     onFlip={() => setIsFlipped(!isFlipped)} 
                                     onPlaySound={() => speak(currentCard.word)} 
                                     onStatusChange={(status) => handleStatusChange(currentCard.id, status)}
+                                    onNext={handleNext}
                                 />
                                 <div className="flex items-center gap-4 mt-8">
                                     <button onClick={handlePrev} className="flex-1 py-3 bg-white/[0.04] border border-white/[0.08] text-slate-300 rounded-2xl hover:bg-white/[0.08] font-semibold transition">← Trước</button>
