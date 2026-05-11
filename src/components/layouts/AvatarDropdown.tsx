@@ -3,11 +3,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useAppDispatch, useAppSelector } from '@/store';
+import authService from '@/services/authService';
+import { logout } from '@/store/slices/authSlice';
 
 export const AvatarDropdown: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
-    const [userName] = useState('Nguyễn Văn A');
-    const [userEmail] = useState('user@example.com');
+    const user = useAppSelector((state) => state.auth.user);
+    const dispatch = useAppDispatch();
+    
+    const userName = user?.name || 'Người dùng';
+    const userEmail = user?.email || '';
     const dropdownRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
 
@@ -26,7 +32,8 @@ export const AvatarDropdown: React.FC = () => {
     const handleLogout = () => {
         if (window.confirm('Bạn chắc chắn muốn đăng xuất?')) {
             setIsOpen(false);
-            // TODO: Clear auth token from localStorage/cookies
+            authService.logout();
+            dispatch(logout());
             router.push('/auth/login');
         }
     };
