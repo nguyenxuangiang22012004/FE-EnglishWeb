@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAppDispatch } from '@/store';
 import authService from '@/services/authService';
 import { setToken, setUser } from '@/store/slices/authSlice';
+import { getUserFromToken } from '@/utils/auth';
 import axios from 'axios';
 
 interface LoginFormData {
@@ -67,9 +68,13 @@ export const LoginForm: React.FC = () => {
                 const token = response.data.accessToken;
                 localStorage.setItem('token', token);
                 dispatch(setToken(token));
-                
-                if (response.data.user) {
-                    dispatch(setUser(response.data.user));
+
+                // Extract user info from token or response
+                const userFromToken = getUserFromToken(token);
+                const user = response.data.user || userFromToken;
+
+                if (user) {
+                    dispatch(setUser(user));
                 }
 
                 // Redirect to dashboard
