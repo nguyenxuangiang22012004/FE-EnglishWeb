@@ -8,6 +8,7 @@ import { FlashcardCard } from '@/components/ui/flashcard/FlashcardCard';
 import { FlashcardList, FilterStatus } from '@/components/ui/flashcard/FlashcardList';
 import { useTextToSpeech } from '@/components/hooks/useTextToSpeech';
 import flashcardService from '@/services/flashcardService';
+import { getFlashcardSetById } from '@/services/flashcardData';
 
 interface StudySessionClientProps {
     initialSet: FlashcardSet;
@@ -26,6 +27,7 @@ export const StudySessionClient: React.FC<StudySessionClientProps> = ({ initialS
     const reduxCurrentIndex = useAppSelector((state) => state.flashcard.currentIndex);
     const [isFlipped, setIsFlipped] = useState(false);
     const [favorites, setFavorites] = useState<string[]>([]);
+    const [isFiltering, setIsFiltering] = useState(false);
     const [currentIndex, setCurrentIndex] = useState(reduxCurrentIndex || 0);
     const [filter, setFilter] = useState<FilterStatus>('all');
     const [localCards, setLocalCards] = useState(initialSet.cards ?? []);
@@ -33,10 +35,26 @@ export const StudySessionClient: React.FC<StudySessionClientProps> = ({ initialS
     useEffect(() => { setCurrentIndex(reduxCurrentIndex); }, [reduxCurrentIndex]);
     useEffect(() => { setLocalCards(initialSet.cards ?? []); }, [initialSet.cards]);
 
-    const baseCards = localCards;
-    const displayCards = filter === 'all' ? baseCards : baseCards.filter(c => (c.status ?? 'unknown') === filter);
+    const displayCards = localCards;
     const safeIndex = displayCards.length > 0 && currentIndex < displayCards.length ? currentIndex : 0;
     const currentCard = displayCards[safeIndex];
+
+    const handleFilterChange = async (newFilter: FilterStatus) => {
+        setFilter(newFilter);
+        setIsFiltering(true);
+        try {
+            const data = await getFlashcardSetById(initialSet.id, newFilter);
+            if (data) {
+                setLocalCards(data.cards ?? []);
+                setCurrentIndex(0);
+                dispatch(reduxSetCurrentIndex(0));
+            }
+        } catch (error) {
+            console.error('Failed to fetch filtered cards', error);
+        } finally {
+            setIsFiltering(false);
+        }
+    };
 
     const handleStartQuiz = (setId: string) => { router.push(`/quiz?setId=${setId}&filter=${filter}`); };
     const handleBackToSets = () => { router.push('/flashcards'); };
@@ -75,8 +93,13 @@ export const StudySessionClient: React.FC<StudySessionClientProps> = ({ initialS
                     <p className="text-slate-500 text-lg">Bộ này hiện đang trống.</p>
                 </div>
             ) : (
-                <div className="space-y-10">
-                    <div className="flex flex-col items-center">
+                <div className={`space-y-10 transition-opacity duration-300 ${isFiltering ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
+                    <div className="flex flex-col items-center relative">
+                        {isFiltering && (
+                            <div className="absolute inset-0 flex items-center justify-center z-10 translate-y-12">
+                                <div className="w-12 h-12 border-4 border-accent-indigo/30 border-t-accent-indigo rounded-full animate-spin"></div>
+                            </div>
+                        )}
                         {currentCard ? (
                             <div className="w-full max-w-md">
                                 <FlashcardCard 
@@ -110,11 +133,11 @@ export const StudySessionClient: React.FC<StudySessionClientProps> = ({ initialS
                     <div className="space-y-4">
                         <div className="flex items-center gap-2 px-2">
                             <h2 className="text-xl font-display font-bold text-slate-200">Danh sách từ vựng</h2>
-                            <span className="bg-white/[0.08] text-slate-400 px-2 py-0.5 rounded-lg text-xs font-bold">{baseCards.length}</span>
+                            <span className="bg-white/[0.08] text-slate-400 px-2 py-0.5 rounded-lg text-xs font-bold">{displayCards.length}</span>
                         </div>
-                        <FlashcardList cards={baseCards} selectedId={currentCard?.id}
+                        <FlashcardList cards={localCards} filter={filter} selectedId={currentCard?.id}
                             onSelect={(id) => { const index = displayCards.findIndex((c) => c.id === id); if (index !== -1) { setCurrentIndex(index); dispatch(reduxSetCurrentIndex(index)); setIsFlipped(false); } }}
-                            onFilterChange={(newFilter) => { setFilter(newFilter); setCurrentIndex(0); dispatch(reduxSetCurrentIndex(0)); }}
+                            onFilterChange={handleFilterChange}
                             onUpdate={(id, data) => { if (data.status) handleStatusChange(id, data.status as any); }}
                         />
                     </div>

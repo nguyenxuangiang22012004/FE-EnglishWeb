@@ -10,7 +10,7 @@ export interface Flashcard { id: string; word: string; meaning: string; pronunci
 type Status = 'unknown' | 'learning' | 'mastered';
 export type FilterStatus = 'all' | Status;
 
-interface FlashcardListProps { cards: Flashcard[]; onDelete?: (id: string) => void; onUpdate?: (id: string, updatedData: Partial<Flashcard>) => void; onSelect?: (id: string) => void; selectedId?: string; onFilterChange?: (filter: FilterStatus) => void; }
+interface FlashcardListProps { cards: Flashcard[]; onDelete?: (id: string) => void; onUpdate?: (id: string, updatedData: Partial<Flashcard>) => void; onSelect?: (id: string) => void; selectedId?: string; onFilterChange?: (filter: FilterStatus) => void; filter?: FilterStatus; }
 
 const STATUS_MAP: Record<Status, { label: string; color: string; icon: React.ReactNode }> = {
     mastered: { label: 'Thuộc', color: 'success', icon: <CheckCircleOutlined /> },
@@ -18,12 +18,14 @@ const STATUS_MAP: Record<Status, { label: string; color: string; icon: React.Rea
     unknown: { label: 'Chưa biết', color: 'error', icon: <CloseCircleOutlined /> },
 };
 
-export const FlashcardList: React.FC<FlashcardListProps> = ({ cards, onDelete, onUpdate, onSelect, selectedId, onFilterChange }) => {
-    const [filter, setFilter] = useState<FilterStatus>('all');
+export const FlashcardList: React.FC<FlashcardListProps> = ({ cards, onDelete, onUpdate, onSelect, selectedId, onFilterChange, filter: externalFilter }) => {
+    const [internalFilter, setInternalFilter] = useState<FilterStatus>('all');
+    const filter = externalFilter !== undefined ? externalFilter : internalFilter;
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<Partial<Flashcard>>({});
 
-    const filteredCards = filter === 'all' ? cards : cards.filter(c => (c.status ?? 'unknown') === filter);
+    // If externalFilter is provided, we assume the cards are already filtered by the backend.
+    const filteredCards = externalFilter !== undefined ? cards : (filter === 'all' ? cards : cards.filter(c => (c.status ?? 'unknown') === filter));
     const handleUpdateStatus = (id: string, newStatus: Status) => { onUpdate?.(id, { status: newStatus }); };
     const startEditing = (card: Flashcard) => { setEditingId(card.id); setEditForm(card); };
 
@@ -35,10 +37,10 @@ export const FlashcardList: React.FC<FlashcardListProps> = ({ cards, onDelete, o
             <div className="glass-card overflow-hidden flex flex-col">
                 <div className="p-4 border-b border-white/[0.06] flex items-center justify-between sticky top-0 z-10 bg-surface-800/80 backdrop-blur-xl">
                     <Space direction="vertical" size={0}>
-                        <Title level={5} style={{ margin: 0 }}>{cards.length} từ vựng</Title>
-                        <Text type="secondary" style={{ fontSize: '12px' }}>{filteredCards.length} từ đang hiển thị</Text>
+                        <Title level={5} style={{ margin: 0 }}>{filteredCards.length} từ vựng</Title>
+                        {externalFilter === undefined && <Text type="secondary" style={{ fontSize: '12px' }}>{filteredCards.length} từ đang hiển thị</Text>}
                     </Space>
-                    <Select value={filter} onChange={(val) => { setFilter(val); onFilterChange?.(val); }} style={{ width: 150 }} suffixIcon={<FilterOutlined />}
+                    <Select value={filter} onChange={(val) => { if (externalFilter === undefined) setInternalFilter(val); onFilterChange?.(val); }} style={{ width: 150 }} suffixIcon={<FilterOutlined />}
                         options={[
                             { value: 'all', label: 'Tất cả', icon: <UnorderedListOutlined /> },
                             { value: 'unknown', label: 'Chưa biết', icon: <CloseCircleOutlined /> },

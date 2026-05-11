@@ -35,9 +35,9 @@ export const getFlashcardSets = async (): Promise<FlashcardSet[]> => {
 };
 
 // Fetch a single set by ID
-export const getFlashcardSetById = async (id: string): Promise<FlashcardSet | null> => {
+export const getFlashcardSetById = async (id: string, status?: string): Promise<FlashcardSet | null> => {
     try {
-        const res = await flashcardService.getSetById(id);
+        const res = await flashcardService.getSetById(id, status);
         if (res.success && res.data) {
             return toLocalSet(res.data);
         }

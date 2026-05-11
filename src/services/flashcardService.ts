@@ -54,8 +54,9 @@ export const flashcardService = {
         return res.data;
     },
 
-    getSetById: async (setId: string): Promise<ApiResponse<FlashcardSetResponse>> => {
-        const res = await axios.get(`/flashcards/sets/${setId}`);
+    getSetById: async (setId: string, status?: string): Promise<ApiResponse<FlashcardSetResponse>> => {
+        const query = status && status !== 'all' ? `?status=${status}` : '';
+        const res = await axios.get(`/flashcards/sets/${setId}${query}`);
         return res.data;
     },
 
