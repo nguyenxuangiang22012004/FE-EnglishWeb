@@ -3,12 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import flashcardService, { FlashcardSetResponse } from '@/services/flashcardService';
 import { FlashcardSetList } from '@/components/ui/flashcard/FlashcardSetList';
-import { FlashcardList } from '@/components/ui/flashcard/FlashcardList';
+import { FlashcardList, FilterStatus } from '@/components/ui/flashcard/FlashcardList';
 import { CreateSetModalCoordinator } from '@/components/ui/flashcard/CreateSetModalCoordinator';
 import { FlashcardSet } from '@/store/slices/flashcardSlice';
 import { ArrowLeftOutlined, PlusOutlined } from '@ant-design/icons';
-import { Button } from 'antd';
+import { Button, Spin } from 'antd';
 import { useRouter } from 'next/navigation';
+import { getFlashcardSetById } from '@/services/flashcardData';
 
 // Convert API response to local FlashcardSet shape for FlashcardSetList
 const toLocalSet = (apiSet: FlashcardSetResponse): FlashcardSet => ({
@@ -35,6 +36,8 @@ export const FlashcardsClientPage: React.FC = () => {
     const [error, setError] = useState('');
     const [editingSet, setEditingSet] = useState<FlashcardSet | null>(null);
     const [viewingSet, setViewingSet] = useState<FlashcardSet | null>(null);
+    const [viewFilter, setViewFilter] = useState<FilterStatus>('all');
+    const [isFiltering, setIsFiltering] = useState(false);
 
     const fetchSets = async () => {
         setIsLoading(true);
@@ -78,6 +81,22 @@ export const FlashcardsClientPage: React.FC = () => {
         }
     };
 
+    const handleFilterChange = async (newFilter: FilterStatus) => {
+        if (!viewingSet) return;
+        setViewFilter(newFilter);
+        setIsFiltering(true);
+        try {
+            const data = await getFlashcardSetById(viewingSet.id, newFilter);
+            if (data) {
+                setViewingSet(data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch filtered cards', error);
+        } finally {
+            setIsFiltering(false);
+        }
+    };
+
     useEffect(() => {
         fetchSets();
     }, []);
@@ -113,14 +132,23 @@ export const FlashcardsClientPage: React.FC = () => {
                         </Button>
                     </div>
 
-                    <FlashcardList 
-                        cards={viewingSet.cards.length > 0 ? viewingSet.cards : [
-                            { id: 'mock-1', word: 'Example', meaning: 'Ví dụ', pronunciation: '/ɪɡˈzæmpl/', status: 'mastered', example: 'This is an example flashcard.' },
-                            { id: 'mock-2', word: 'Flashcard', meaning: 'Thẻ ghi nhớ', pronunciation: '/ˈflæʃkɑːrd/', status: 'learning', example: 'Flashcards are great for learning.' },
-                            { id: 'mock-3', word: 'Study', meaning: 'Học tập', pronunciation: '/ˈstʌdi/', status: 'unknown', example: 'I need to study for the exam.' },
-                        ]} 
-                        onUpdate={(id, data) => { if (data.status) handleStatusChange(id, data.status); }}
-                    />
+                    <div className={`relative transition-opacity duration-300 ${isFiltering ? 'opacity-50' : 'opacity-100'}`}>
+                        {isFiltering && (
+                            <div className="absolute inset-0 flex items-center justify-center z-10">
+                                <Spin size="large" />
+                            </div>
+                        )}
+                        <FlashcardList 
+                            cards={viewingSet.cards.length > 0 ? viewingSet.cards : (viewFilter === 'all' ? [
+                                { id: 'mock-1', word: 'Example', meaning: 'Ví dụ', pronunciation: '/ɪɡˈzæmpl/', status: 'mastered', example: 'This is an example flashcard.' },
+                                { id: 'mock-2', word: 'Flashcard', meaning: 'Thẻ ghi nhớ', pronunciation: '/ˈflæʃkɑːrd/', status: 'learning', example: 'Flashcards are great for learning.' },
+                                { id: 'mock-3', word: 'Study', meaning: 'Học tập', pronunciation: '/ˈstʌdi/', status: 'unknown', example: 'I need to study for the exam.' },
+                            ] : [])} 
+                            filter={viewFilter}
+                            onFilterChange={handleFilterChange}
+                            onUpdate={(id, data) => { if (data.status) handleStatusChange(id, data.status); }}
+                        />
+                    </div>
                 </div>
             ) : (
                 <>

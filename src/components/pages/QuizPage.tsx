@@ -54,11 +54,15 @@ export const QuizPage: React.FC = () => {
                 return;
             }
             setIsLoading(true);
-            const data = await getFlashcardSetById(setId);
-            if (data) {
-                setCurrentSet(data);
-                const fullCards = data.cards ?? [];
-                const quizCards = filter === 'all' ? fullCards : fullCards.filter(c => (c as any).status === filter || (!(c as any).status && filter === 'unknown'));
+            const [fullData, filteredData] = await Promise.all([
+                getFlashcardSetById(setId, 'all'),
+                getFlashcardSetById(setId, filter === 'all' ? undefined : (filter as string))
+            ]);
+
+            if (fullData && filteredData) {
+                setCurrentSet(fullData);
+                const fullCards = fullData.cards ?? [];
+                const quizCards = filteredData.cards ?? [];
                 setQuestions(buildQuestions(quizCards, fullCards));
             }
             setIsLoading(false);
@@ -67,7 +71,8 @@ export const QuizPage: React.FC = () => {
     }, [setId, filter]);
 
     const fullCards = currentSet?.cards ?? [];
-    const quizCards = filter === 'all' ? fullCards : fullCards.filter(c => (c as any).status === filter || (!(c as any).status && filter === 'unknown'));
+    // Note: Quiz cards are already fetched and filtered via API during initialization
+    const quizCards = questions.map(q => fullCards.find(c => c.id === q.cardId)).filter(Boolean) as any[];
 
     const question = questions[currentIndex];
     const isLastQuestion = currentIndex === questions.length - 1;
