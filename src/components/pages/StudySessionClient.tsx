@@ -82,13 +82,13 @@ export const StudySessionClient: React.FC<StudySessionClientProps> = ({ initialS
                         {initialSet.emoji} {initialSet.name}
                     </h1>
                 </div>
-                <button onClick={() => handleStartQuiz(initialSet.id)} disabled={baseCards.length < 4 || displayCards.length === 0}
+                <button onClick={() => handleStartQuiz(initialSet.id)} disabled={localCards.length < 4 || displayCards.length === 0}
                     className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-accent-indigo to-accent-indigo-light text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition disabled:opacity-40 glow-btn text-sm">
                     🎯 Làm Quiz {filter !== 'all' && `(${displayCards.length})`}
                 </button>
             </div>
 
-            {baseCards.length === 0 ? (
+            {(localCards.length === 0 && filter === 'all') ? (
                 <div className="glass-card border-2 border-dashed border-white/10 p-12 text-center">
                     <p className="text-slate-500 text-lg">Bộ này hiện đang trống.</p>
                 </div>
