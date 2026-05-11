@@ -25,3 +25,9 @@ Coding standards:
 - Keep functions single responsibility
 - Use environment variables for configs/secrets
 - Follow consistent folder structure
+
+Coding style:
+- Never render TSX components in a single long line
+- Always expand props to multiple lines
+- Prefer readable early returns
+- Keep TSX vertically formatted
