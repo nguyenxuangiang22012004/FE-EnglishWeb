@@ -15,7 +15,7 @@ import flashcardService from '@/services/flashcardService';
 
 function shuffle<T>(arr: T[]): T[] { return [...arr].sort(() => Math.random() - 0.5); }
 
-function buildQuestions(cards: { id: string; word: string; meaning: string; pronunciation?: string }[], fallbackPool: { id: string; word: string; meaning: string; pronunciation?: string }[] = []): Question[] {
+function buildQuestions(cards: { id: string; word: string; meaning: string; pronunciation?: string; partOfSpeech?: string }[], fallbackPool: { id: string; word: string; meaning: string; pronunciation?: string; partOfSpeech?: string }[] = []): Question[] {
     if (cards.length === 0) return [];
     const distractorPool = [...cards, ...fallbackPool.filter((f) => !cards.find((c) => c.id === f.id))];
     return shuffle(cards).map((card) => {
@@ -24,7 +24,7 @@ function buildQuestions(cards: { id: string; word: string; meaning: string; pron
         const correctIndex = Math.floor(Math.random() * 4);
         const options = [...wrongOptions];
         options.splice(correctIndex, 0, card.meaning);
-        return { cardId: card.id, word: card.word, pronunciation: card.pronunciation, options, correctIndex };
+        return { cardId: card.id, word: card.word, pronunciation: card.pronunciation, partOfSpeech: card.partOfSpeech, options, correctIndex };
     });
 }
 

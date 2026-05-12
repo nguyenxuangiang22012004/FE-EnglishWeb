@@ -15,6 +15,7 @@ const toLocalSet = (apiSet: FlashcardSetResponse): FlashcardSet => ({
         word: card.word,
         meaning: card.meaning,
         pronunciation: card.pronunciation,
+        partOfSpeech: card.partOfSpeech,
         example: card.example,
         createdAt: card.createdAt,
         status: (card.status || 'unknown').toLowerCase() as any,

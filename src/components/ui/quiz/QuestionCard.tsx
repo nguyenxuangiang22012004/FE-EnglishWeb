@@ -17,7 +17,14 @@ const QuestionCard: React.FC<QuestionCardProps> = ({ currentIndex, question, sel
                         <Volume2 size={24} />
                     </button>
                 </div>
-                {question.pronunciation && <p className="text-sm text-slate-500 mt-1">{question.pronunciation}</p>}
+                <div className="flex items-center justify-center gap-2 mt-1">
+                    {question.partOfSpeech && (
+                        <span className="text-[10px] font-bold uppercase tracking-widest bg-accent-indigo/20 text-accent-indigo-light px-2 py-0.5 rounded-md border border-accent-indigo/10">
+                            {question.partOfSpeech}
+                        </span>
+                    )}
+                    {question.pronunciation && <p className="text-sm text-slate-500 font-mono italic opacity-80">/{question.pronunciation}/</p>}
+                </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
                 {question.options.map((option, index) => (

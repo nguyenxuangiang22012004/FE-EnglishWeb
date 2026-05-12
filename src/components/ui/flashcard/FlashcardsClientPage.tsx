@@ -23,6 +23,7 @@ const toLocalSet = (apiSet: FlashcardSetResponse): FlashcardSet => ({
         word: card.word,
         meaning: card.meaning,
         pronunciation: card.pronunciation,
+        partOfSpeech: card.partOfSpeech,
         example: card.example,
         createdAt: card.createdAt,
         status: (card.status || 'unknown').toLowerCase() as any,
@@ -97,6 +98,14 @@ export const FlashcardsClientPage: React.FC = () => {
         }
     };
 
+    const handleViewDetails = (set: FlashcardSet) => {
+        if (set.cards.length === 0) {
+            router.push(`/create?setId=${set.id}`);
+        } else {
+            setViewingSet(set);
+        }
+    };
+
     useEffect(() => {
         fetchSets();
     }, []);
@@ -139,11 +148,7 @@ export const FlashcardsClientPage: React.FC = () => {
                             </div>
                         )}
                         <FlashcardList 
-                            cards={viewingSet.cards.length > 0 ? viewingSet.cards : (viewFilter === 'all' ? [
-                                { id: 'mock-1', word: 'Example', meaning: 'Ví dụ', pronunciation: '/ɪɡˈzæmpl/', status: 'mastered', example: 'This is an example flashcard.' },
-                                { id: 'mock-2', word: 'Flashcard', meaning: 'Thẻ ghi nhớ', pronunciation: '/ˈflæʃkɑːrd/', status: 'learning', example: 'Flashcards are great for learning.' },
-                                { id: 'mock-3', word: 'Study', meaning: 'Học tập', pronunciation: '/ˈstʌdi/', status: 'unknown', example: 'I need to study for the exam.' },
-                            ] : [])} 
+                            cards={viewingSet.cards} 
                             filter={viewFilter}
                             onFilterChange={handleFilterChange}
                             onUpdate={(id, data) => { if (data.status) handleStatusChange(id, data.status); }}
@@ -180,7 +185,7 @@ export const FlashcardsClientPage: React.FC = () => {
                             sets={sets} 
                             onEdit={setEditingSet} 
                             onDelete={handleDeleteSet} 
-                            onViewDetails={setViewingSet}
+                            onViewDetails={handleViewDetails}
                         />
                     )}
                 </>
