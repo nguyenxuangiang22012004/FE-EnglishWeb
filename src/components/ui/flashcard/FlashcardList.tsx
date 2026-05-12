@@ -6,7 +6,7 @@ import { EditOutlined, DeleteOutlined, StarFilled, FilterOutlined, CheckCircleOu
 
 const { Text, Title } = Typography;
 
-export interface Flashcard { id: string; word: string; meaning: string; pronunciation?: string; example?: string; createdAt?: string; status?: 'unknown' | 'learning' | 'mastered'; isFavorite?: boolean; }
+export interface Flashcard { id: string; word: string; meaning: string; pronunciation?: string; partOfSpeech?: string; example?: string; createdAt?: string; status?: 'unknown' | 'learning' | 'mastered'; isFavorite?: boolean; }
 type Status = 'unknown' | 'learning' | 'mastered';
 export type FilterStatus = 'all' | Status;
 
@@ -75,6 +75,7 @@ export const FlashcardList: React.FC<FlashcardListProps> = ({ cards, onDelete, o
                                         title={<div style={{ marginBottom: 4 }}>
                                             <Space size="middle" align="center" style={{ display: 'flex', flexWrap: 'wrap' }}>
                                                 <Text strong style={{ fontSize: '20px', lineHeight: '1.2' }}>{card.word}</Text>
+                                                {card.partOfSpeech && <Tag color="blue" bordered={false} style={{ borderRadius: '4px', margin: 0, fontSize: '11px' }}>{card.partOfSpeech}</Tag>}
                                                 {card.pronunciation && <Text type="secondary" style={{ fontStyle: 'italic', fontSize: '14px' }}>/{card.pronunciation}/</Text>}
                                                 <Dropdown menu={{ items: statusMenu }} trigger={['click']}>
                                                     <Tag color={config.color} icon={config.icon} className="cursor-pointer hover:opacity-80 transition-opacity"
@@ -95,9 +96,10 @@ export const FlashcardList: React.FC<FlashcardListProps> = ({ cards, onDelete, o
                                         <Space direction="vertical" className="w-full" size="middle">
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div><Text style={{ fontSize: '12px' }} type="secondary">Từ vựng</Text><Input value={editForm.word} onChange={e => setEditForm({ ...editForm, word: e.target.value })} /></div>
+                                                <div><Text style={{ fontSize: '12px' }} type="secondary">Từ loại</Text><Input value={editForm.partOfSpeech} onChange={e => setEditForm({ ...editForm, partOfSpeech: e.target.value })} placeholder="adj, noun, verb..." /></div>
                                                 <div><Text style={{ fontSize: '12px' }} type="secondary">Phiên âm</Text><Input prefix={<AudioOutlined />} value={editForm.pronunciation} onChange={e => setEditForm({ ...editForm, pronunciation: e.target.value })} /></div>
+                                                <div><Text style={{ fontSize: '12px' }} type="secondary">Nghĩa</Text><Input value={editForm.meaning} onChange={e => setEditForm({ ...editForm, meaning: e.target.value })} /></div>
                                             </div>
-                                            <div><Text style={{ fontSize: '12px' }} type="secondary">Nghĩa</Text><Input value={editForm.meaning} onChange={e => setEditForm({ ...editForm, meaning: e.target.value })} /></div>
                                             <div className="flex justify-end gap-2 pt-2">
                                                 <Button size="small" onClick={() => setEditingId(null)}>Hủy</Button>
                                                 <Button size="small" type="primary" icon={<SaveOutlined />} onClick={() => { onUpdate?.(card.id, editForm); setEditingId(null); }}>Lưu</Button>

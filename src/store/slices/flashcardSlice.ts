@@ -6,6 +6,7 @@ export interface Flashcard {
   word: string;
   meaning: string;
   pronunciation?: string;
+  partOfSpeech?: string;
   example?: string;
   createdAt?: string;
   status?: 'unknown' | 'learning' | 'mastered';

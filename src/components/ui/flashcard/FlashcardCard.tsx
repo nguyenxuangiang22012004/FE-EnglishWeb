@@ -8,6 +8,7 @@ interface FlashcardProps {
     word: string;
     meaning: string;
     pronunciation?: string;
+    partOfSpeech?: string;
     example?: string;
     image?: string;
     isFlipped?: boolean;
@@ -18,7 +19,7 @@ interface FlashcardProps {
     onNext?: () => void;
 }
 
-export const FlashcardCard: React.FC<FlashcardProps> = ({ word, meaning, pronunciation, example, image, isFlipped = false, status = 'unknown', onFlip, onPlaySound, onStatusChange, onNext }) => {
+export const FlashcardCard: React.FC<FlashcardProps> = ({ word, meaning, pronunciation, partOfSpeech, example, image, isFlipped = false, status = 'unknown', onFlip, onPlaySound, onStatusChange, onNext }) => {
     const STATUS_MAP: Record<Status, { label: string; color: string; border: string; bg: string; hover: string }> = {
         unknown: { label: 'Chưa biết', color: '#fb7185', border: 'border-rose-500/30', bg: 'bg-rose-500/10', hover: 'hover:bg-rose-500/20' },
         learning: { label: 'Đang học', color: '#fbbf24', border: 'border-amber-400/30', bg: 'bg-amber-400/10', hover: 'hover:bg-amber-400/20' },
@@ -45,8 +46,19 @@ export const FlashcardCard: React.FC<FlashcardProps> = ({ word, meaning, pronunc
 
                         <div className="flex flex-col items-center justify-center text-center w-full px-4">
                             <h3 className="text-white text-5xl md:text-6xl font-display font-bold drop-shadow-md tracking-tight mb-3">{word}</h3>
-                            {pronunciation && <p className="text-indigo-200 text-lg md:text-xl font-mono opacity-90 bg-black/10 px-4 py-1 rounded-full border border-white/5">/{pronunciation.replace(/^\/|\/$/g, '')}/</p>}
-                            {image && <div className="mt-6 w-24 h-24 bg-white/10 rounded-2xl flex items-center justify-center text-white/50 text-xs border border-white/10 shadow-inner backdrop-blur-sm">[Hình ảnh]</div>}
+                            <div className="flex flex-wrap items-center justify-center gap-2 mb-2">
+                                {partOfSpeech && (
+                                    <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest bg-accent-indigo-light/30 text-white px-2 py-0.5 rounded-md border border-white/10 backdrop-blur-sm">
+                                        {partOfSpeech}
+                                    </span>
+                                )}
+                                {pronunciation && (
+                                    <p className="text-indigo-200 text-lg md:text-xl font-mono opacity-90 bg-black/10 px-4 py-1 rounded-full border border-white/5">
+                                        /{pronunciation.replace(/^\/|\/$/g, '')}/
+                                    </p>
+                                )}
+                            </div>
+                            {image && <div className="mt-4 w-20 h-20 bg-white/10 rounded-2xl flex items-center justify-center text-white/50 text-xs border border-white/10 shadow-inner backdrop-blur-sm">[Hình ảnh]</div>}
                         </div>
                         
                         <div className="absolute bottom-5 left-0 w-full px-6 flex justify-between items-end">
@@ -64,7 +76,12 @@ export const FlashcardCard: React.FC<FlashcardProps> = ({ word, meaning, pronunc
                         </div>
 
                         <div className="flex flex-col items-center justify-center text-center w-full px-2">
-                            <h3 className="text-white text-3xl md:text-4xl font-display font-bold leading-tight drop-shadow-md mb-6">{meaning}</h3>
+                            <h3 className="text-white text-3xl md:text-4xl font-display font-bold leading-tight drop-shadow-md mb-4">{meaning}</h3>
+                            {partOfSpeech && (
+                                <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest bg-white/10 text-white/80 px-2 py-0.5 rounded-md border border-white/5 mb-4">
+                                    {partOfSpeech}
+                                </span>
+                            )}
                             
                             {example && (
                                 <div className="bg-black/20 p-5 rounded-2xl border border-white/10 w-full max-w-sm backdrop-blur-md shadow-inner text-left relative overflow-hidden">

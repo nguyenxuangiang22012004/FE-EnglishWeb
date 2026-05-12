@@ -6,13 +6,13 @@ import { PlusOutlined, DeleteOutlined, SaveOutlined, ClearOutlined } from '@ant-
 
 const { Title, Text } = Typography;
 
-interface FlashcardRow { id: number; word: string; pronunciation: string; meaning: string; example: string; }
+interface FlashcardRow { id: number; word: string; pronunciation: string; partOfSpeech: string; meaning: string; example: string; }
 interface CreateFlashcardFormProps { onSubmit?: (data: Omit<FlashcardRow, 'id'>[]) => void; isLoading?: boolean; }
 
 let nextId = Date.now();
 
 export const CreateFlashcardForm: React.FC<CreateFlashcardFormProps> = ({ onSubmit, isLoading }) => {
-    const createRow = (): FlashcardRow => ({ id: nextId++, word: '', pronunciation: '', meaning: '', example: '' });
+    const createRow = (): FlashcardRow => ({ id: nextId++, word: '', pronunciation: '', partOfSpeech: '', meaning: '', example: '' });
     const [rows, setRows] = useState<FlashcardRow[]>([createRow(), createRow(), createRow()]);
 
     const addRows = (count = 1) => { const newRows = Array.from({ length: count }, createRow); setRows(prev => [...prev, ...newRows]); };
@@ -25,9 +25,10 @@ export const CreateFlashcardForm: React.FC<CreateFlashcardFormProps> = ({ onSubm
 
     const columns = [
         { title: '#', dataIndex: 'index', key: 'index', width: 50, align: 'center' as const, render: (_: any, __: any, index: number) => <Text type="secondary">{index + 1}</Text> },
-        { title: <span>Từ tiếng Anh <Text type="danger">*</Text></span>, dataIndex: 'word', key: 'word', render: (text: string, record: FlashcardRow) => <Input placeholder="e.g. Resilient" value={text} onChange={(e) => updateField(record.id, 'word', e.target.value)} onPressEnter={() => addRows(1)} /> },
-        { title: 'Phiên âm', dataIndex: 'pronunciation', key: 'pronunciation', render: (text: string, record: FlashcardRow) => <Input placeholder="/rɪˈzɪliənt/" value={text} onChange={(e) => updateField(record.id, 'pronunciation', e.target.value)} /> },
-        { title: <span>Nghĩa tiếng Việt <Text type="danger">*</Text></span>, dataIndex: 'meaning', key: 'meaning', render: (text: string, record: FlashcardRow) => <Input placeholder="Kiên cường" value={text} onChange={(e) => updateField(record.id, 'meaning', e.target.value)} /> },
+        { title: <span>Từ tiếng Anh <Text type="danger">*</Text></span>, dataIndex: 'word', key: 'word', width: 200, render: (text: string, record: FlashcardRow) => <Input placeholder="e.g. Resilient" value={text} onChange={(e) => updateField(record.id, 'word', e.target.value)} onPressEnter={() => addRows(1)} /> },
+        { title: 'Từ loại', dataIndex: 'partOfSpeech', key: 'partOfSpeech', width: 120, render: (text: string, record: FlashcardRow) => <Input placeholder="adj, n..." value={text} onChange={(e) => updateField(record.id, 'partOfSpeech', e.target.value)} /> },
+        { title: 'Phiên âm', dataIndex: 'pronunciation', key: 'pronunciation', width: 150, render: (text: string, record: FlashcardRow) => <Input placeholder="/rɪˈzɪliənt/" value={text} onChange={(e) => updateField(record.id, 'pronunciation', e.target.value)} /> },
+        { title: <span>Nghĩa tiếng Việt <Text type="danger">*</Text></span>, dataIndex: 'meaning', key: 'meaning', width: 200, render: (text: string, record: FlashcardRow) => <Input placeholder="Kiên cường" value={text} onChange={(e) => updateField(record.id, 'meaning', e.target.value)} /> },
         { title: 'Ví dụ', dataIndex: 'example', key: 'example', render: (text: string, record: FlashcardRow) => <Input placeholder="She is very resilient." value={text} onChange={(e) => updateField(record.id, 'example', e.target.value)} /> },
         { title: '', key: 'action', width: 50, render: (_: any, record: FlashcardRow) => <Button type="text" danger icon={<DeleteOutlined />} onClick={() => deleteRow(record.id)} disabled={rows.length <= 1} /> },
     ];

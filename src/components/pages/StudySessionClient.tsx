@@ -107,6 +107,7 @@ export const StudySessionClient: React.FC<StudySessionClientProps> = ({ initialS
                                     word={currentCard.word} 
                                     meaning={currentCard.meaning} 
                                     pronunciation={currentCard.pronunciation} 
+                                    partOfSpeech={currentCard.partOfSpeech}
                                     example={currentCard.example ?? 'Chưa có ví dụ cho từ này'} 
                                     isFlipped={isFlipped} 
                                     status={currentCard.status as 'unknown' | 'learning' | 'mastered'}

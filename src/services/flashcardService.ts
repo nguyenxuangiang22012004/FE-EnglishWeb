@@ -11,6 +11,7 @@ export interface FlashcardCardPayload {
     word: string;
     meaning: string;
     pronunciation?: string;
+    partOfSpeech?: string;
     example?: string;
 }
 
@@ -19,6 +20,7 @@ export interface FlashcardCardResponse {
     word: string;
     meaning: string;
     pronunciation?: string;
+    partOfSpeech?: string;
     example?: string;
     createdAt: string;
     status: 'UNKNOWN' | 'LEARNING' | 'MASTERED';
