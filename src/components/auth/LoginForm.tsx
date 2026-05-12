@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAppDispatch } from '@/store';
 import authService from '@/services/authService';
 import { setToken, setUser } from '@/store/slices/authSlice';
@@ -24,6 +24,7 @@ export const LoginForm: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const router = useRouter();
+    const searchParams = useSearchParams();
     const dispatch = useAppDispatch();
 
     const getLoginErrorMessage = (err: unknown): string => {
@@ -77,8 +78,9 @@ export const LoginForm: React.FC = () => {
                     dispatch(setUser(user));
                 }
 
-                // Redirect to dashboard
-                router.push('/dashboard');
+                // Redirect to the original page or dashboard
+                const redirectTo = searchParams.get('redirect') || '/dashboard';
+                router.push(redirectTo);
             } else if (response.message) {
                 setError(response.message);
             }

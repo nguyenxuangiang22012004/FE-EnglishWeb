@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/store';
-import { setToken } from '@/store/slices/authSlice';
+import { setToken, logout } from '@/store/slices/authSlice';
+import { jwtDecode } from 'jwt-decode';
 
 const publicPaths = ['/auth/login', '/auth/signup', '/auth/forgot-password'];
 
@@ -14,25 +15,62 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     const [isChecking, setIsChecking] = useState(true);
     const token = useAppSelector((state) => state.auth.token);
 
-    useEffect(() => {
+    const checkAuth = () => {
         const storedToken = localStorage.getItem('token');
-        
-        // If we have a token in localStorage but not in Redux state, sync it
-        if (storedToken && !token) {
-            dispatch(setToken(storedToken));
-        }
-
         const isPublicPath = publicPaths.some(path => pathname.startsWith(path));
 
-        if (!storedToken && !isPublicPath) {
-            // No token and trying to access private route
-            router.push('/auth/login');
-        } else if (storedToken && isPublicPath) {
-            // Has token and trying to access login/signup
-            router.push('/dashboard');
-        } else {
-            setIsChecking(false);
+        if (!storedToken) {
+            if (!isPublicPath) {
+                // No token and trying to access private route
+                router.push(`/auth/login?redirect=${encodeURIComponent(pathname)}`);
+            } else {
+                setIsChecking(false);
+            }
+            return;
         }
+
+        // Check if token is expired
+        try {
+            const decoded: any = jwtDecode(storedToken);
+            const currentTime = Date.now() / 1000;
+            
+            if (decoded.exp && decoded.exp < currentTime) {
+                // Token expired
+                localStorage.removeItem('token');
+                dispatch(logout());
+                if (!isPublicPath) {
+                    router.push(`/auth/login?redirect=${encodeURIComponent(pathname)}`);
+                } else {
+                    setIsChecking(false);
+                }
+                return;
+            }
+
+            // Token is valid, sync to Redux if needed
+            if (!token) {
+                dispatch(setToken(storedToken));
+            }
+
+            if (isPublicPath) {
+                // Has valid token and trying to access login/signup
+                router.push('/dashboard');
+            } else {
+                setIsChecking(false);
+            }
+        } catch (error) {
+            // Invalid token
+            localStorage.removeItem('token');
+            dispatch(logout());
+            if (!isPublicPath) {
+                router.push(`/auth/login?redirect=${encodeURIComponent(pathname)}`);
+            } else {
+                setIsChecking(false);
+            }
+        }
+    };
+
+    useEffect(() => {
+        checkAuth();
     }, [pathname, token, dispatch, router]);
 
     if (isChecking) {

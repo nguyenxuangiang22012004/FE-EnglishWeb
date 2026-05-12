@@ -1,4 +1,6 @@
 import axios from 'axios';
+import store from '@/store';
+import { logout } from '@/store/slices/authSlice';
 
 const instance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
@@ -23,12 +25,18 @@ instance.interceptors.request.use(
 instance.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Handle unauthorized
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      // Handle unauthorized or forbidden (token expired/invalid)
       localStorage.removeItem('token');
+      store.dispatch(logout());
+      
       // Force redirect to login page
       if (typeof window !== 'undefined') {
-        window.location.href = '/auth/login';
+        const currentPath = window.location.pathname;
+        // Only redirect if not already on the login page to avoid infinite loops
+        if (!currentPath.includes('/auth/login')) {
+          window.location.href = `/auth/login?redirect=${encodeURIComponent(currentPath)}`;
+        }
       }
     }
     return Promise.reject(error);
