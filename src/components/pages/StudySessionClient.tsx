@@ -58,6 +58,7 @@ export const StudySessionClient: React.FC<StudySessionClientProps> = ({ initialS
     };
 
     const handleStartQuiz = (setId: string) => { router.push(`/quiz?setId=${setId}&filter=${filter}`); };
+    const handleStartTyping = (setId: string) => { router.push(`/typing?setId=${setId}`); };
     const handleBackToSets = () => { router.push('/flashcards'); };
     const handleNext = () => { if (displayCards.length === 0) return; const newIndex = (safeIndex + 1) % displayCards.length; setCurrentIndex(newIndex); dispatch(reduxSetCurrentIndex(newIndex)); setIsFlipped(false); };
     const handlePrev = () => { if (displayCards.length === 0) return; const newIndex = (safeIndex - 1 + displayCards.length) % displayCards.length; setCurrentIndex(newIndex); dispatch(reduxSetCurrentIndex(newIndex)); setIsFlipped(false); };
@@ -91,6 +92,10 @@ export const StudySessionClient: React.FC<StudySessionClientProps> = ({ initialS
                     <button onClick={() => handleStartQuiz(initialSet.id)} disabled={localCards.length < 4 || displayCards.length === 0}
                         className="flex-1 sm:flex-none px-6 py-2.5 bg-gradient-to-r from-accent-indigo to-accent-indigo-light text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition disabled:opacity-40 glow-btn text-sm">
                         🎯 Làm Quiz {filter !== 'all' && `(${displayCards.length})`}
+                    </button>
+                    <button onClick={() => handleStartTyping(initialSet.id)} disabled={localCards.length === 0}
+                        className="flex-1 sm:flex-none px-6 py-2.5 bg-gradient-to-r from-accent-emerald to-accent-cyan text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition disabled:opacity-40 glow-btn text-sm">
+                        ✍️ Gõ từ
                     </button>
                 </div>
             </div>
