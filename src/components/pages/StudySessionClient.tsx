@@ -9,6 +9,7 @@ import { FlashcardList, FilterStatus } from '@/components/ui/flashcard/Flashcard
 import { useTextToSpeech } from '@/components/hooks/useTextToSpeech';
 import flashcardService from '@/services/flashcardService';
 import { getFlashcardSetById } from '@/services/flashcardData';
+import { ExcelDownloadButton } from '@/components/ui/ExcelDownloadButton';
 
 interface StudySessionClientProps {
     initialSet: FlashcardSet;
@@ -82,10 +83,16 @@ export const StudySessionClient: React.FC<StudySessionClientProps> = ({ initialS
                         {initialSet.emoji} {initialSet.name}
                     </h1>
                 </div>
-                <button onClick={() => handleStartQuiz(initialSet.id)} disabled={localCards.length < 4 || displayCards.length === 0}
-                    className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-accent-indigo to-accent-indigo-light text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition disabled:opacity-40 glow-btn text-sm">
-                    🎯 Làm Quiz {filter !== 'all' && `(${displayCards.length})`}
-                </button>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <ExcelDownloadButton
+                        setId={initialSet.id}
+                        setName={initialSet.name}
+                    />
+                    <button onClick={() => handleStartQuiz(initialSet.id)} disabled={localCards.length < 4 || displayCards.length === 0}
+                        className="flex-1 sm:flex-none px-6 py-2.5 bg-gradient-to-r from-accent-indigo to-accent-indigo-light text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition disabled:opacity-40 glow-btn text-sm">
+                        🎯 Làm Quiz {filter !== 'all' && `(${displayCards.length})`}
+                    </button>
+                </div>
             </div>
 
             {(localCards.length === 0 && filter === 'all') ? (
@@ -102,17 +109,17 @@ export const StudySessionClient: React.FC<StudySessionClientProps> = ({ initialS
                         )}
                         {currentCard ? (
                             <div className="w-full max-w-md">
-                                <FlashcardCard 
+                                <FlashcardCard
                                     key={currentCard.id}
-                                    word={currentCard.word} 
-                                    meaning={currentCard.meaning} 
-                                    pronunciation={currentCard.pronunciation} 
+                                    word={currentCard.word}
+                                    meaning={currentCard.meaning}
+                                    pronunciation={currentCard.pronunciation}
                                     partOfSpeech={currentCard.partOfSpeech}
-                                    example={currentCard.example ?? 'Chưa có ví dụ cho từ này'} 
-                                    isFlipped={isFlipped} 
+                                    example={currentCard.example ?? 'Chưa có ví dụ cho từ này'}
+                                    isFlipped={isFlipped}
                                     status={currentCard.status as 'unknown' | 'learning' | 'mastered'}
-                                    onFlip={() => setIsFlipped(!isFlipped)} 
-                                    onPlaySound={() => speak(currentCard.word)} 
+                                    onFlip={() => setIsFlipped(!isFlipped)}
+                                    onPlaySound={() => speak(currentCard.word)}
                                     onStatusChange={(status) => handleStatusChange(currentCard.id, status)}
                                     onNext={handleNext}
                                 />
