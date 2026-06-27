@@ -27,6 +27,7 @@ export const Sidebar: React.FC = () => {
                 { href: '/flashcards', label: 'Thẻ ghi nhớ', icon: <BookOpen size={18} /> },
                 { href: '/import', label: 'Import từ vựng', icon: <Mic size={18} /> },
                 { href: '/ai-lookup', label: 'AI Tra cứu', icon: <Library size={18} /> },
+                { href: '/conversation', label: 'Luyện nói AI', icon: <MessageCircle size={18} /> },
             ]
         },
         // {

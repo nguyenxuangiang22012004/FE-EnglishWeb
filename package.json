@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@reduxjs/toolkit": "^1.9.7",
     "antd": "^6.3.5",
     "axios": "^1.6.0",

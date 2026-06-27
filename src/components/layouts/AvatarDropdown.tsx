@@ -6,9 +6,11 @@ import { useRouter } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/store';
 import authService from '@/services/authService';
 import { logout } from '@/store/slices/authSlice';
+import { SettingsModal } from '../ui/SettingsModal';
 
 export const AvatarDropdown: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const user = useAppSelector((state) => state.auth.user);
     const dispatch = useAppDispatch();
     
@@ -78,7 +80,7 @@ export const AvatarDropdown: React.FC = () => {
             icon: '⚙️',
             onClick: () => {
                 setIsOpen(false);
-                alert('Chức năng Cài đặt sẽ được cập nhật');
+                setIsSettingsOpen(true);
             },
         },
         {
@@ -190,6 +192,8 @@ export const AvatarDropdown: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
         </div>
     );
 };
