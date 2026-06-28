@@ -21,13 +21,13 @@ export default function ConversationUI() {
     const [inputText, setInputText] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
-    
+
     // Conversation list state
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [page, setPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
     const [isLoadingList, setIsLoadingList] = useState(false);
-    
+
     const chatSession = useRef<any>(null);
     const recognitionRef = useRef<any>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -53,7 +53,7 @@ export default function ConversationUI() {
     useEffect(() => {
         const storedTopic = localStorage.getItem('conversation_topic');
         if (storedTopic) setTopic(storedTopic);
-        
+
         fetchConversations(0);
     }, []);
 
@@ -70,10 +70,10 @@ export default function ConversationUI() {
             setError('Vui lòng nhập Chủ đề.');
             return;
         }
-        
+
         const storedKey = localStorage.getItem('gemini_api_key');
         const storedModel = localStorage.getItem('gemini_model_id') || 'gemini-1.5-pro';
-        
+
         if (!storedKey) {
             setError('Bạn chưa nhập API Key. Vui lòng vào Cài đặt (ở menu Avatar) để thiết lập.');
             return;
@@ -86,18 +86,18 @@ export default function ConversationUI() {
         try {
             const conv = await conversationService.createConversation(topic.trim(), storedModel, '');
             setActiveConversationId(conv.id);
-            
+
             chatSession.current = await startConversation(storedKey, topic.trim(), storedModel);
             // Send initial prompt to kickstart
             const result = await chatSession.current.sendMessage("Hello! Let's start.");
             const responseText = result.response.text();
-            
+
             // Extract vocabulary JSON from response
             const jsonRegex = /```json\n([\s\S]*?)\n```/;
             const match = responseText.match(jsonRegex);
             let speechText = responseText;
             let vocabJsonStr = '';
-            
+
             if (match && match[1]) {
                 try {
                     vocabJsonStr = match[1];
@@ -114,10 +114,10 @@ export default function ConversationUI() {
 
             const aiMsg = await conversationService.addMessage(conv.id, 'model', speechText);
             setMessages([aiMsg]);
-            
+
             // Re-fetch conversations to show the new one
             fetchConversations(0);
-            
+
             speakText(speechText);
             setIsSetup(false);
         } catch (err: any) {
@@ -136,10 +136,10 @@ export default function ConversationUI() {
         try {
             const userMsg = await conversationService.addMessage(activeConversationId, 'user', text.trim());
             setMessages(prev => [...prev, userMsg]);
-            
+
             const result = await chatSession.current.sendMessage(text.trim());
             let aiText = result.response.text();
-            
+
             const aiMsg = await conversationService.addMessage(activeConversationId, 'model', aiText);
             setMessages(prev => [...prev, aiMsg]);
             speakText(aiText);
@@ -163,7 +163,7 @@ export default function ConversationUI() {
                     setInputText(prev => prev ? prev + ' ' + text : text);
                 },
                 (err) => {
-                    setError('Lỗi nhận diện giọng nói: ' + err.message);
+                    setError('Lỗi nhận diện giọng nói: ');
                     setIsRecording(false);
                 },
                 () => {
@@ -188,21 +188,21 @@ export default function ConversationUI() {
             const fullConv = await conversationService.getConversation(conv.id);
             setActiveConversationId(fullConv.id);
             setTopic(fullConv.topic);
-            
+
             if (fullConv.vocabularyJson) {
                 try {
                     const parsed = JSON.parse(fullConv.vocabularyJson);
                     if (parsed.vocabulary) setVocabulary(parsed.vocabulary);
-                } catch (e) {}
+                } catch (e) { }
             }
-            
+
             setMessages(fullConv.messages || []);
-            
+
             // Re-initialize chat session with history
             const { GoogleGenerativeAI } = await import('@google/generative-ai');
             const genAI = new GoogleGenerativeAI(storedKey);
             const model = genAI.getGenerativeModel({ model: fullConv.modelId });
-            
+
             let history = [
                 {
                     role: 'user',
@@ -229,7 +229,7 @@ export default function ConversationUI() {
                     temperature: 0.7,
                 },
             });
-            
+
             setIsSetup(false);
         } catch (err: any) {
             setError('Lỗi khi tải cuộc hội thoại: ' + err.message);
@@ -284,10 +284,10 @@ export default function ConversationUI() {
                         >
                             {isLoading ? <Loader2 size={18} className="animate-spin" /> : 'Bắt đầu luyện tập'}
                         </button>
-                        
+
                         <div className="pt-6 border-t border-white/[0.04]">
                             <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Lịch sử hội thoại</h3>
-                            
+
                             {isLoadingList && conversations.length === 0 ? (
                                 <div className="flex justify-center py-4"><Loader2 size={20} className="animate-spin text-slate-500" /></div>
                             ) : conversations.length === 0 ? (
@@ -295,8 +295,8 @@ export default function ConversationUI() {
                             ) : (
                                 <div className="space-y-3">
                                     {conversations.map(conv => (
-                                        <div 
-                                            key={conv.id} 
+                                        <div
+                                            key={conv.id}
                                             onClick={() => handleLoadConversation(conv)}
                                             className="bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.05] p-4 rounded-xl cursor-pointer transition-colors"
                                         >
@@ -305,7 +305,7 @@ export default function ConversationUI() {
                                         </div>
                                     ))}
                                     {hasMore && (
-                                        <button 
+                                        <button
                                             onClick={() => fetchConversations(page + 1, true)}
                                             className="w-full text-xs text-accent-indigo hover:text-accent-indigo-light py-2 mt-2 transition-colors"
                                         >
@@ -332,7 +332,7 @@ export default function ConversationUI() {
                         </h2>
                         <p className="text-sm text-slate-400">Model: {localStorage.getItem('gemini_model_id') || 'gemini-1.5-pro'}</p>
                     </div>
-                    <button 
+                    <button
                         onClick={() => {
                             if (window.speechSynthesis) window.speechSynthesis.cancel();
                             setActiveConversationId(null);
@@ -348,14 +348,13 @@ export default function ConversationUI() {
                 <div className="flex-1 overflow-y-auto space-y-4 mb-6 scrollbar-thin scrollbar-thumb-white/10 pr-2">
                     {messages.map((msg) => (
                         <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`max-w-[70%] p-4 rounded-2xl ${
-                                msg.role === 'user' 
-                                    ? 'bg-accent-indigo text-white rounded-br-sm' 
+                            <div className={`max-w-[70%] p-4 rounded-2xl ${msg.role === 'user'
+                                    ? 'bg-accent-indigo text-white rounded-br-sm'
                                     : 'bg-white/[0.04] border border-white/[0.08] text-slate-200 rounded-bl-sm'
-                            }`}>
+                                }`}>
                                 <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{msg.text}</p>
                                 {msg.role === 'model' && (
-                                    <button 
+                                    <button
                                         onClick={() => speakText(msg.text)}
                                         className="mt-2 text-slate-400 hover:text-accent-indigo-light transition-colors"
                                         title="Nghe lại"
@@ -386,16 +385,15 @@ export default function ConversationUI() {
                 <div className="relative flex items-center gap-3">
                     <button
                         onClick={toggleRecording}
-                        className={`p-4 rounded-full transition-all flex-shrink-0 shadow-lg ${
-                            isRecording 
-                                ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' 
+                        className={`p-4 rounded-full transition-all flex-shrink-0 shadow-lg ${isRecording
+                                ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse'
                                 : 'bg-surface-800 hover:bg-surface-700 text-slate-300 border border-white/10'
-                        }`}
+                            }`}
                         title={isRecording ? "Dừng ghi âm" : "Bắt đầu ghi âm"}
                     >
                         {isRecording ? <Square size={20} className="fill-current" /> : <Mic size={20} />}
                     </button>
-                    
+
                     <textarea
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}

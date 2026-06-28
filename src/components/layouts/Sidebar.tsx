@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
     Home, Headphones, Mic, MessageCircle, BookOpen,
     Star, List as ListIcon, Library, Trophy, BarChart2,
-    Crown, ArrowRight, X
+    Crown, ArrowRight, X, PlayCircle
 } from 'lucide-react';
 import { AvatarDropdown } from './AvatarDropdown';
 
@@ -28,6 +28,7 @@ export const Sidebar: React.FC = () => {
                 { href: '/import', label: 'Import từ vựng', icon: <Mic size={18} /> },
                 { href: '/ai-lookup', label: 'AI Tra cứu', icon: <Library size={18} /> },
                 { href: '/conversation', label: 'Luyện nói AI', icon: <MessageCircle size={18} /> },
+                { href: '/ailistening', label: 'Luyện nghe', icon: <PlayCircle size={18} />, badge: 'Mới' },
             ]
         },
         // {
