@@ -37,6 +37,11 @@ function getGeminiKey(): string {
   );
 }
 
+function getGeminiModel(): string {
+  if (typeof window === 'undefined') return 'gemini-1.5-pro';
+  return localStorage.getItem('gemini_model_id') || 'gemini-1.5-pro';
+}
+
 export async function generateListeningLesson(
   topic: string,
   level: CEFRLevel,
@@ -44,6 +49,7 @@ export async function generateListeningLesson(
 ): Promise<ListeningLesson> {
   const key = getGeminiKey();
   if (!key) throw new Error('Chưa có Gemini API Key. Vui lòng thêm key trong Cài đặt.');
+  const model = getGeminiModel();
 
   const wordCountMap: Record<CEFRLevel, string> = {
     A2: '80-110',
@@ -84,7 +90,7 @@ Respond ONLY with a valid JSON object (no markdown, no code fences, no extra tex
 }`;
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
