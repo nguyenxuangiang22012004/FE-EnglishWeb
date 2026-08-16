@@ -1,5 +1,6 @@
 import React from 'react';
 import ConversationUI from '@/components/pages/conversation/ConversationUI';
+import { AppLayout } from '@/components/layouts/AppLayout';
 
 export const metadata = {
     title: 'Luyện nói AI - HelloEnglish',
@@ -8,8 +9,10 @@ export const metadata = {
 
 export default function ConversationPage() {
     return (
-        <div className="flex-1 overflow-y-auto">
-            <ConversationUI />
-        </div>
+        <AppLayout>
+            <div className="flex-1 overflow-y-auto">
+                <ConversationUI />
+            </div>
+        </AppLayout>
     );
 }

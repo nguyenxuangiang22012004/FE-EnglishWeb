@@ -68,6 +68,9 @@ export const LoginForm: React.FC = () => {
             if (response.success && response.data.accessToken) {
                 const token = response.data.accessToken;
                 localStorage.setItem('token', token);
+                if (response.data.refreshToken) {
+                    localStorage.setItem('refreshToken', response.data.refreshToken);
+                }
                 dispatch(setToken(token));
 
                 // Extract user info from token or response

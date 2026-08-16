@@ -106,7 +106,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         <select
                             value={selectedModel}
                             onChange={(e) => setSelectedModel(e.target.value)}
-                            className="w-full bg-surface-950 border border-white/10 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-accent-indigo transition-colors appearance-none"
+                            className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-gray-800 focus:outline-none focus:border-accent-indigo transition-colors appearance-none"
                         >
                             <option value="gemini-1.5-pro">Gemini 1.5 Pro (Mặc định cũ)</option>
                             {AI_MODELS.map(model => (

@@ -115,6 +115,13 @@ h1, h2, h3, h4, h5, h6 {
     background: rgba(255, 255, 255, 0.07);
   }
 
+  /* Select dropdown — white bg + dark text for readability */
+  select,
+  select option {
+    background-color: #ffffff;
+    color: #1e293b;
+  }
+
   .glow-btn {
     position: relative;
     overflow: hidden;

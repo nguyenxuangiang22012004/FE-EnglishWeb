@@ -484,7 +484,7 @@ const SetupScreen: React.FC<{
                   value={voiceIndex}
                   onChange={(e) => onSetVoiceIndex(Number(e.target.value))}
                   disabled={isLoading}
-                  className="flex-1 px-3 py-2 glass-input rounded-xl text-slate-200 text-xs"
+                  className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-xl text-gray-800 text-xs"
                 >
                   {availableVoices.map((v, i) => (
                     <option key={i} value={i}>

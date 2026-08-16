@@ -15,6 +15,7 @@ export const authService = {
 
   logout: (): void => {
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
   },
 
   getProfile: async () => {

@@ -15,7 +15,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     const [isChecking, setIsChecking] = useState(true);
     const token = useAppSelector((state) => state.auth.token);
 
-    const checkAuth = () => {
+    const checkAuth = async () => {
         const storedToken = localStorage.getItem('token');
         const isPublicPath = publicPaths.some(path => pathname.startsWith(path));
 
@@ -36,14 +36,58 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
             
             if (decoded.exp && decoded.exp < currentTime) {
                 // Token expired
-                localStorage.removeItem('token');
-                dispatch(logout());
-                if (!isPublicPath) {
-                    router.push(`/auth/login?redirect=${encodeURIComponent(pathname)}`);
-                } else {
-                    setIsChecking(false);
+                const refreshToken = localStorage.getItem('refreshToken');
+                if (!refreshToken) {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('refreshToken');
+                    dispatch(logout());
+                    if (!isPublicPath) {
+                        router.push(`/auth/login?redirect=${encodeURIComponent(pathname)}`);
+                    } else {
+                        setIsChecking(false);
+                    }
+                    return;
                 }
-                return;
+                
+                try {
+                    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ refreshToken })
+                    });
+                    
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.success && data.data.accessToken) {
+                            const newToken = data.data.accessToken;
+                            localStorage.setItem('token', newToken);
+                            if (data.data.refreshToken) {
+                                localStorage.setItem('refreshToken', data.data.refreshToken);
+                            }
+                            dispatch(setToken(newToken));
+                            
+                            if (isPublicPath) {
+                                router.push('/dashboard');
+                            } else {
+                                setIsChecking(false);
+                            }
+                            return;
+                        }
+                    }
+                    throw new Error('Refresh failed');
+                } catch (e) {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('refreshToken');
+                    dispatch(logout());
+                    if (!isPublicPath) {
+                        router.push(`/auth/login?redirect=${encodeURIComponent(pathname)}`);
+                    } else {
+                        setIsChecking(false);
+                    }
+                    return;
+                }
             }
 
             // Token is valid, sync to Redux if needed
@@ -60,6 +104,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         } catch (error) {
             // Invalid token
             localStorage.removeItem('token');
+            localStorage.removeItem('refreshToken');
             dispatch(logout());
             if (!isPublicPath) {
                 router.push(`/auth/login?redirect=${encodeURIComponent(pathname)}`);
