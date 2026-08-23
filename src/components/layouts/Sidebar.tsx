@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
     Home, Headphones, Mic, MessageCircle, BookOpen,
     Star, List as ListIcon, Library, Trophy, BarChart2,
-    Crown, ArrowRight, X, PlayCircle
+    Crown, ArrowRight, X, PlayCircle, GraduationCap
 } from 'lucide-react';
 import { AvatarDropdown } from './AvatarDropdown';
 
@@ -24,6 +24,7 @@ export const Sidebar: React.FC = () => {
         {
             title: 'HỌC TẬP',
             items: [
+                { href: '/courses', label: 'Khóa học', icon: <GraduationCap size={18} />, badge: 'Mới' },
                 { href: '/flashcards', label: 'Thẻ ghi nhớ', icon: <BookOpen size={18} /> },
                 { href: '/import', label: 'Import từ vựng', icon: <Mic size={18} /> },
                 { href: '/ai-lookup', label: 'AI Tra cứu', icon: <Library size={18} /> },

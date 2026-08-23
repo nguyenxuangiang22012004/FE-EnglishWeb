@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/store';
-import { setToken, logout } from '@/store/slices/authSlice';
+import { setToken, setUser, logout } from '@/store/slices/authSlice';
 import { jwtDecode } from 'jwt-decode';
+import { getUserFromToken } from '@/utils/auth';
 
 const publicPaths = ['/auth/login', '/auth/signup', '/auth/forgot-password'];
 
@@ -93,6 +94,12 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
             // Token is valid, sync to Redux if needed
             if (!token) {
                 dispatch(setToken(storedToken));
+                
+                // Fetch user from token if not present
+                const userFromToken = getUserFromToken(storedToken);
+                if (userFromToken) {
+                    dispatch(setUser(userFromToken));
+                }
             }
 
             if (isPublicPath) {
