@@ -1,42 +1,83 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { AILookupBox } from '@/components/ui/AILookupBox';
-
-interface WordResult {
-    word: string;
-    meaning: string;
-    pronunciation?: string;
-    wordType?: string;
-    examples?: string[];
-    synonyms?: string[];
-    antonyms?: string[];
-}
+import { lookupEnglishWord, VocabularyLookupResult } from '@/services/vocabularyLookupService';
+import { lookupHistoryService, AiLookupHistoryResponse } from '@/services/lookupHistoryService';
+import { message } from 'antd';
+import { DeckSelectModal } from '@/components/ui/DeckSelectModal';
 
 export const AILookupPage: React.FC = () => {
-    const [result, setResult] = React.useState<WordResult | undefined>(undefined);
-    const [isLoading, setIsLoading] = React.useState(false);
+    const [result, setResult] = useState<VocabularyLookupResult | undefined>(undefined);
+    const [isLoading, setIsLoading] = useState(false);
+    const [recentSearches, setRecentSearches] = useState<AiLookupHistoryResponse[]>([]);
+    const [isDeckModalOpen, setIsDeckModalOpen] = useState(false);
+
+    useEffect(() => {
+        fetchRecentHistory();
+    }, []);
+
+    const fetchRecentHistory = async () => {
+        try {
+            const data = await lookupHistoryService.getRecentHistory();
+            setRecentSearches(data);
+        } catch (error) {
+            console.error('Error fetching recent history:', error);
+        }
+    };
 
     const handleSearch = async (word: string) => {
+        if (!word.trim()) return;
         setIsLoading(true);
-        // Simulate API call
-        setTimeout(() => {
-            setResult({
-                word: word,
-                meaning: 'Định nghĩa tiếng Việt của từ này',
-                pronunciation: '/prəˈnʌnseɪʃən/',
-                wordType: 'noun',
-                examples: [
-                    'This is the first example sentence.',
-                    'Here is another example with the word.',
-                    'One more example to show usage.',
-                ],
-                synonyms: ['similar1', 'similar2'],
-                antonyms: ['opposite1', 'opposite2'],
-            });
+        try {
+            const data = await lookupEnglishWord(word);
+            setResult(data);
+            
+            // Save to history
+            await lookupHistoryService.saveHistory(data);
+            
+            // Refresh history
+            fetchRecentHistory();
+        } catch (error: any) {
+            message.error(error.message || 'Lỗi khi tra cứu từ vựng.');
+            setResult(undefined);
+        } finally {
             setIsLoading(false);
-        }, 1500);
+        }
     };
+
+    const handleRecentClick = (historyItem: AiLookupHistoryResponse) => {
+        setResult({
+            word: historyItem.word,
+            partOfSpeech: historyItem.partOfSpeech,
+            pronunciation: historyItem.pronunciation,
+            meaning: historyItem.meaning,
+            example: historyItem.example
+        });
+    };
+
+    // Adapt VocabularyLookupResult to what AILookupBox expects
+    const adaptedResult = result ? {
+        word: result.word,
+        meaning: result.meaning,
+        pronunciation: result.pronunciation,
+        wordType: result.partOfSpeech,
+        examples: result.example ? [result.example] : []
+    } : undefined;
+
+    const handleAddFlashcard = () => {
+        if (result) {
+            setIsDeckModalOpen(true);
+        }
+    };
+
+    const cardsPayload = result ? [{
+        word: result.word,
+        meaning: result.meaning,
+        pronunciation: result.pronunciation,
+        partOfSpeech: result.partOfSpeech,
+        example: result.example || ''
+    }] : [];
 
     return (
         <div className="space-y-6">
@@ -44,7 +85,12 @@ export const AILookupPage: React.FC = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2">
-                    <AILookupBox onSearch={handleSearch} isLoading={isLoading} result={result} />
+                    <AILookupBox 
+                        onSearch={handleSearch} 
+                        isLoading={isLoading} 
+                        result={adaptedResult} 
+                        onAddFlashcard={handleAddFlashcard}
+                    />
                 </div>
 
                 {/* Tips */}
@@ -60,20 +106,30 @@ export const AILookupPage: React.FC = () => {
             </div>
 
             {/* Recent Searches */}
-            <div className="glass-card p-6">
-                <h3 className="text-lg font-display font-bold text-slate-200 mb-4">🕐 Tìm kiếm gần đây</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {['amazing', 'beautiful', 'courage', 'determination'].map((word) => (
-                        <button
-                            key={word}
-                            onClick={() => handleSearch(word)}
-                            className="p-3 bg-white/[0.04] border border-white/[0.06] rounded-xl hover:bg-white/[0.08] hover:border-accent-indigo/20 text-slate-300 font-medium transition-all text-sm"
-                        >
-                            {word}
-                        </button>
-                    ))}
+            {recentSearches.length > 0 && (
+                <div className="glass-card p-6">
+                    <h3 className="text-lg font-display font-bold text-slate-200 mb-4">🕐 Tìm kiếm gần đây</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {recentSearches.map((historyItem) => (
+                            <button
+                                key={historyItem.id}
+                                onClick={() => handleRecentClick(historyItem)}
+                                className="p-3 bg-white/[0.04] border border-white/[0.06] rounded-xl hover:bg-white/[0.08] hover:border-accent-indigo/20 text-slate-300 font-medium transition-all text-sm"
+                            >
+                                {historyItem.word}
+                            </button>
+                        ))}
+                    </div>
                 </div>
-            </div>
+            )}
+
+            <DeckSelectModal
+                isOpen={isDeckModalOpen}
+                onClose={() => setIsDeckModalOpen(false)}
+                cards={cardsPayload}
+                onSuccess={() => {}}
+                redirectOnSuccess={false}
+            />
         </div>
     );
 };

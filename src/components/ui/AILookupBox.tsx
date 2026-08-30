@@ -6,9 +6,10 @@ interface AILookupBoxProps {
     onSearch?: (word: string) => void;
     isLoading?: boolean;
     result?: { word: string; meaning: string; pronunciation?: string; wordType?: string; examples?: string[]; synonyms?: string[]; antonyms?: string[]; };
+    onAddFlashcard?: () => void;
 }
 
-export const AILookupBox: React.FC<AILookupBoxProps> = ({ onSearch, isLoading, result }) => {
+export const AILookupBox: React.FC<AILookupBoxProps> = ({ onSearch, isLoading, result, onAddFlashcard }) => {
     const [searchWord, setSearchWord] = useState('');
     const handleSearch = () => { if (searchWord.trim()) { onSearch?.(searchWord); } };
 
@@ -50,7 +51,7 @@ export const AILookupBox: React.FC<AILookupBoxProps> = ({ onSearch, isLoading, r
                             <div><p className="font-semibold text-slate-300 mb-2">Từ trái nghĩa:</p><p className="text-sm text-slate-400">{result.antonyms.join(', ')}</p></div>
                         )}
                     </div>
-                    <button className="w-full py-2.5 bg-gradient-to-r from-accent-emerald to-accent-cyan text-white rounded-xl font-semibold glow-btn text-sm">➕ Thêm vào Flashcard</button>
+                    <button onClick={onAddFlashcard} className="w-full py-2.5 bg-gradient-to-r from-accent-emerald to-accent-cyan text-white rounded-xl font-semibold glow-btn text-sm">➕ Thêm vào Flashcard</button>
                 </div>
             )}
         </div>

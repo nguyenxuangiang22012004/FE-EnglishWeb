@@ -21,6 +21,7 @@ interface DeckSelectModalProps {
     onClose: () => void;
     cards: FlashcardCardPayload[];
     onSuccess: () => void;
+    redirectOnSuccess?: boolean;
 }
 
 type ModalView = 'select' | 'create';
@@ -195,6 +196,7 @@ export const DeckSelectModal: React.FC<DeckSelectModalProps> = ({
     onClose,
     cards,
     onSuccess,
+    redirectOnSuccess = true,
 }) => {
     const router = useRouter();
     const [sets, setSets] = useState<FlashcardSetResponse[]>([]);
@@ -251,7 +253,9 @@ export const DeckSelectModal: React.FC<DeckSelectModalProps> = ({
                 setTimeout(() => {
                     onSuccess();
                     onClose();
-                    router.push('/flashcards');
+                    if (redirectOnSuccess) {
+                        router.push('/flashcards');
+                    }
                 }, 1500);
             } else {
                 setStatus('error');

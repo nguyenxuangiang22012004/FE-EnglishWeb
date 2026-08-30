@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useImportVocabulary } from '@/components/hooks/useImportVocabulary';
-import { DeckSelectModal } from '@/components/pages/import/DeckSelectModal';
+import { DeckSelectModal } from '@/components/ui/DeckSelectModal';
 
 export const ImportVocabularyPage: React.FC = () => {
     const {

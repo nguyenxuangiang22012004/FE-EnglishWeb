@@ -44,6 +44,47 @@ export interface Lesson {
   contentJson: string | any;
 }
 
+// ─── Progress Interfaces ─────────────────────────────────────────────────────
+
+export interface TopicProgress {
+  topicId: string;
+  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
+  currentLessonId: string | null;
+  currentStep: number;
+  score: number | null;
+  isPassed: boolean;
+  completedLessonIds: string[];
+  updatedAt: string | null;
+}
+
+export interface CourseProgress {
+  courseId: string;
+  topicProgresses: TopicProgress[];
+}
+
+export interface LessonActivityPayload {
+  lessonId: string;
+  topicId: string;
+  score?: number | null;
+  isCompleted: boolean;
+}
+
+export interface UpdateTopicProgressPayload {
+  currentLessonId?: string | null;
+  currentStep: number;
+  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
+  score?: number | null;
+}
+
+export interface TopicFinalScore {
+  topicId: string;
+  finalScore: number | null;       // null nếu không có lesson nào có điểm
+  scoredLessonsCount: number;      // số lesson được tính điểm
+  totalLessonsCount: number;       // tổng số lesson trong topic
+}
+
+// ─── Service ─────────────────────────────────────────────────────────────────
+
 export const courseService = {
   getCourses: async (page: number = 0, size: number = 10, search: string = ''): Promise<PaginatedResponse<Course>> => {
     const res = await axios.get('/courses', {
@@ -65,5 +106,51 @@ export const courseService = {
   getLessonsByTopic: async (topicId: string): Promise<Lesson[]> => {
     const res = await axios.get(`/courses/topics/${topicId}/lessons`);
     return res.data?.data || res.data;
-  }
+  },
+
+  // ─── Progress APIs ──────────────────────────────────────────────────────────
+
+  /**
+   * Lấy tiến trình học toàn bộ course (tất cả topics, lesson đã hoàn thành).
+   * Gọi khi vào trang course detail.
+   */
+  getCourseProgress: async (courseId: string): Promise<CourseProgress> => {
+    const res = await axios.get(`/courses/${courseId}/my-progress`);
+    return res.data?.data || res.data;
+  },
+
+  /**
+   * Lưu thao tác khi user hoàn thành 1 lesson.
+   * Gọi mỗi khi user chuyển sang bước tiếp theo.
+   */
+  saveLessonActivity: async (data: LessonActivityPayload): Promise<void> => {
+    await axios.post('/courses/lessons/activity', data);
+  },
+
+  /**
+   * Cập nhật tổng hợp tiến trình 1 topic (upsert).
+   * Gọi song song với saveLessonActivity.
+   */
+  updateTopicProgress: async (topicId: string, data: UpdateTopicProgressPayload): Promise<TopicProgress> => {
+    const res = await axios.put(`/courses/topics/${topicId}/progress`, data);
+    return res.data?.data || res.data;
+  },
+
+  /**
+   * Lấy điểm tổng kết topic từ BE (tính từ activity đã lưu).
+   * Gọi khi user hoàn thành toàn bộ topic.
+   */
+  getTopicFinalScore: async (topicId: string): Promise<TopicFinalScore> => {
+    const res = await axios.get(`/courses/topics/${topicId}/final-score`);
+    return res.data?.data || res.data;
+  },
+
+  /**
+   * Xóa toàn bộ activity của 1 topic và reset tiến trình về NOT_STARTED.
+   */
+  resetTopicProgress: async (topicId: string): Promise<TopicProgress> => {
+    const res = await axios.delete(`/courses/topics/${topicId}/progress`);
+    return res.data?.data || res.data;
+  },
 };
+
