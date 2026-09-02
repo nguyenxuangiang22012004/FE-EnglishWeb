@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Mic, Send, Settings, AlertCircle, Loader2, Volume2, Square } from 'lucide-react';
 import { startConversation } from '@/services/gemini';
 import { speakText, startListening } from '@/utils/speech';
+import { useRouter } from 'next/navigation';
 import { conversationService, Conversation, ConversationMessage } from '@/services/conversationService';
 
 type VocabItem = {
@@ -14,6 +15,7 @@ type VocabItem = {
 export default function ConversationUI() {
     const [topic, setTopic] = useState('');
     const [level, setLevel] = useState('B1');
+    const router = useRouter();
     const [isSetup, setIsSetup] = useState(true);
     const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
     const [messages, setMessages] = useState<ConversationMessage[]>([]);
@@ -33,6 +35,7 @@ export default function ConversationUI() {
     const chatSession = useRef<any>(null);
     const recognitionRef = useRef<any>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     const fetchConversations = async (pageNumber: number, append = false) => {
         setIsLoadingList(true);
@@ -56,11 +59,33 @@ export default function ConversationUI() {
         const storedTopic = localStorage.getItem('conversation_topic');
         if (storedTopic) setTopic(storedTopic);
 
+        const params = new URLSearchParams(window.location.search);
+        const convId = params.get('id');
+        if (convId) {
+            const loadFromUrl = async () => {
+                const storedKey = localStorage.getItem('gemini_api_key');
+                if (storedKey) {
+                    try {
+                        const fullConv = await conversationService.getConversation(convId);
+                        handleLoadConversation(fullConv);
+                    } catch (e) {
+                        console.error('Failed to load conversation from URL', e);
+                    }
+                }
+            };
+            loadFromUrl();
+        }
+
         fetchConversations(0);
     }, []);
 
     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTo({
+                top: scrollContainerRef.current.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
     };
     useEffect(() => {
         if (messages.length > 0) {
@@ -89,6 +114,7 @@ export default function ConversationUI() {
         try {
             const conv = await conversationService.createConversation(topic.trim(), storedModel, level, '');
             setActiveConversationId(conv.id);
+            router.push(`?id=${conv.id}`);
 
             chatSession.current = await startConversation(storedKey, topic.trim(), level, storedModel);
             // Send initial prompt to kickstart
@@ -277,6 +303,7 @@ Return ONLY JSON format exactly like this, no markdown formatting:
             setIsLoading(true);
             const fullConv = await conversationService.getConversation(conv.id);
             setActiveConversationId(fullConv.id);
+            router.push(`?id=${fullConv.id}`);
             setTopic(fullConv.topic);
 
             const loadedLevel = fullConv.level || 'B1';
@@ -445,6 +472,7 @@ Return ONLY JSON format exactly like this, no markdown formatting:
                             setActiveConversationId(null);
                             setMessages([]);
                             setIsSetup(true);
+                            router.push('/conversation');
                         }}
                         className="text-sm text-slate-400 hover:text-white transition-colors"
                     >
@@ -452,7 +480,10 @@ Return ONLY JSON format exactly like this, no markdown formatting:
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto space-y-4 mb-6 scrollbar-thin scrollbar-thumb-white/10 pr-2">
+                <div 
+                    ref={scrollContainerRef}
+                    className="flex-1 overflow-y-auto space-y-4 mb-6 scrollbar-thin scrollbar-thumb-white/10 pr-2"
+                >
                     {messages.map((msg) => (
                         <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                             <div className={`max-w-[70%] p-4 rounded-2xl ${msg.role === 'user'
