@@ -13,6 +13,7 @@ import {
   calcScore,
   getEnglishVoices,
   saveListeningHistory,
+  updateListeningHistory
 } from '@/services/aiListening';
 
 export type ListeningStatus =
@@ -72,6 +73,7 @@ export function useAIListening(): UseAIListeningReturn {
   const [status, setStatus] = useState<ListeningStatus>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [lesson, setLesson] = useState<ListeningLesson | null>(null);
+  const [currentHistoryId, setCurrentHistoryId] = useState<string | null>(null);
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
   const [quizResults, setQuizResults] = useState<QuizResult[]>([]);
   const [totalScore, setTotalScore] = useState(0);
@@ -235,6 +237,7 @@ export function useAIListening(): UseAIListeningReturn {
     setErrorMsg('');
     stopSpeech();
     setLesson(null);
+    setCurrentHistoryId(null);
     setUserAnswers({});
     setQuizResults([]);
     setTotalScore(0);
@@ -245,6 +248,20 @@ export function useAIListening(): UseAIListeningReturn {
       const result = await generateListeningLesson(topic, level, questionCount);
       setLesson(result);
       setStatus('ready');
+
+      // Lưu ngay vào lịch sử với điểm số = 0, chưa có câu trả lời
+      saveListeningHistory({
+        topic,
+        level,
+        lessonData: result,
+        userAnswersData: {},
+        score: 0,
+      }).then(res => {
+        setCurrentHistoryId(res.id);
+      }).catch(err => {
+        console.error('Failed to save initial listening history:', err);
+      });
+
       // Auto-play sau 600ms để trang render xong
       setTimeout(() => {
         speakLesson(result.passage, playbackRate, voiceIndex);
@@ -269,17 +286,16 @@ export function useAIListening(): UseAIListeningReturn {
     setStatus('submitted');
     stopSpeech();
 
-    // Lưu vào backend
-    saveListeningHistory({
-      topic,
-      level,
-      lessonData: lesson,
-      userAnswersData: userAnswers,
-      score,
-    }).catch((err) => {
-      console.error('Failed to save listening history:', err);
-    });
-  }, [lesson, userAnswers, stopSpeech, topic, level]);
+    // Cập nhật lại lịch sử đã lưu trước đó
+    if (currentHistoryId) {
+      updateListeningHistory(currentHistoryId, {
+        userAnswersData: userAnswers,
+        score,
+      }).catch((err) => {
+        console.error('Failed to update listening history:', err);
+      });
+    }
+  }, [lesson, userAnswers, stopSpeech, currentHistoryId]);
 
   const retryQuiz = useCallback(() => {
     setUserAnswers({});
@@ -297,6 +313,7 @@ export function useAIListening(): UseAIListeningReturn {
     stopSpeech();
     setStatus('idle');
     setLesson(null);
+    setCurrentHistoryId(null);
     setUserAnswers({});
     setQuizResults([]);
     setTotalScore(0);

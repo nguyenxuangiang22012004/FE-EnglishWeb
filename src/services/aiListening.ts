@@ -201,6 +201,11 @@ export async function saveListeningHistory(data: SaveAiListeningHistoryRequest):
   return res.data.data; // assuming ApiResponse wrapper
 }
 
+export async function updateListeningHistory(id: string, data: Partial<SaveAiListeningHistoryRequest>): Promise<AiListeningHistoryResponse> {
+  const res = await axios.put(`/ai-listening/history/${id}`, data);
+  return res.data.data;
+}
+
 export async function getListeningHistory(page = 0, size = 10): Promise<PaginatedResponse<AiListeningHistoryResponse>> {
   const res = await axios.get('/ai-listening/history', { params: { page, size } });
   return res.data.data;
