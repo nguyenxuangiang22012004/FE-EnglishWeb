@@ -4,6 +4,8 @@ export interface ConversationMessage {
     id: string;
     role: 'user' | 'model';
     text: string;
+    feedback?: string;
+    suggestedAnswer?: string;
     createdAt: string;
 }
 
@@ -11,6 +13,7 @@ export interface Conversation {
     id: string;
     topic: string;
     modelId: string;
+    level: string;
     vocabularyJson: string;
     createdAt: string;
     messages?: ConversationMessage[];
@@ -35,13 +38,23 @@ export const conversationService = {
         return response.data;
     },
 
-    createConversation: async (topic: string, modelId: string, vocabularyJson: string): Promise<Conversation> => {
-        const response = await api.post('/conversations', { topic, modelId, vocabularyJson });
+    createConversation: async (topic: string, modelId: string, level: string, vocabularyJson: string): Promise<Conversation> => {
+        const response = await api.post('/conversations', { topic, modelId, level, vocabularyJson });
         return response.data;
     },
 
     addMessage: async (conversationId: string, role: 'user' | 'model', text: string): Promise<ConversationMessage> => {
         const response = await api.post(`/conversations/${conversationId}/messages`, { role, text });
+        return response.data;
+    },
+
+    updateVocabulary: async (conversationId: string, vocabularyJson: string): Promise<Conversation> => {
+        const response = await api.put(`/conversations/${conversationId}/vocabulary`, { vocabularyJson });
+        return response.data;
+    },
+
+    updateMessageFeedback: async (conversationId: string, messageId: string, feedback: string, suggestedAnswer: string): Promise<ConversationMessage> => {
+        const response = await api.put(`/conversations/${conversationId}/messages/${messageId}/feedback`, { feedback, suggestedAnswer });
         return response.data;
     }
 };

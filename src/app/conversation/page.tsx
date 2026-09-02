@@ -9,10 +9,8 @@ export const metadata = {
 
 export default function ConversationPage() {
     return (
-        <AppLayout>
-            <div className="flex-1 overflow-y-auto">
-                <ConversationUI />
-            </div>
+        <AppLayout noScroll noPadding>
+            <ConversationUI />
         </AppLayout>
     );
 }
