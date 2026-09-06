@@ -13,8 +13,10 @@ import {
   calcScore,
   getEnglishVoices,
   saveListeningHistory,
-  updateListeningHistory
+  updateListeningHistory,
+  getListeningHistoryById
 } from '@/services/aiListening';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export type ListeningStatus =
   | 'idle'        // màn hình setup
@@ -42,6 +44,7 @@ export interface UseAIListeningReturn {
   selectedVoiceIndex: number;
   playbackRate: number;
   showTranscript: boolean;
+  showBilingual: boolean;
   answeredCount: number;
 
   // Setup form state (lifted so components can read)
@@ -59,12 +62,14 @@ export interface UseAIListeningReturn {
   generate: () => Promise<void>;
   playPause: () => void;
   stopSpeech: () => void;
+  seekTo: (progressPercent: number) => void;
   setAnswer: (questionId: number, answer: string) => void;
   submitQuiz: () => void;
   retryQuiz: () => void;
   startQuiz: () => void;
   resetAll: () => void;
   toggleTranscript: () => void;
+  toggleBilingual: () => void;
   previewVoice: () => void;
   loadHistoryReview: (historyItem: any) => void;
 }
@@ -87,6 +92,10 @@ export function useAIListening(): UseAIListeningReturn {
   const [selectedVoiceIndex, setSelectedVoiceIndex] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [showTranscript, setShowTranscript] = useState(false);
+  const [showBilingual, setShowBilingual] = useState(false);
+
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Form state
   const [topic, setTopic] = useState('');
@@ -98,6 +107,8 @@ export function useAIListening(): UseAIListeningReturn {
   const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const speechStartRef = useRef<number>(0);
   const estimatedDurRef = useRef<number>(0);
+  const charIndexRef = useRef<number>(0);
+  const isInitialLoadRef = useRef<boolean>(true);
 
   // Load voices
   useEffect(() => {
@@ -124,6 +135,35 @@ export function useAIListening(): UseAIListeningReturn {
     };
   }, []);
 
+  // Load from URL ID
+  useEffect(() => {
+    if (isInitialLoadRef.current) {
+      isInitialLoadRef.current = false;
+      const id = searchParams?.get('id');
+      if (id) {
+        setStatus('generating');
+        getListeningHistoryById(id).then(res => {
+          setTopic(res.topic);
+          setLevel(res.level);
+          setLesson(res.lessonData);
+          setCurrentHistoryId(res.id);
+          
+          if (res.userAnswersData && Object.keys(res.userAnswersData).length > 0) {
+             setUserAnswers(res.userAnswersData);
+             setTotalScore(res.score);
+             setQuizResults(scoreQuiz(res.lessonData.questions, res.userAnswersData));
+             setStatus('submitted');
+          } else {
+             setStatus('ready');
+          }
+        }).catch(err => {
+          console.error('Failed to load lesson from url id:', err);
+          setStatus('idle');
+        });
+      }
+    }
+  }, [searchParams]);
+
   const clearProgressTimer = useCallback(() => {
     if (progressTimerRef.current) {
       clearInterval(progressTimerRef.current);
@@ -137,13 +177,13 @@ export function useAIListening(): UseAIListeningReturn {
     return (words / (150 * rate)) * 60;
   }, []);
 
-  const startProgressTimer = useCallback((durationSec: number) => {
+  const startProgressTimer = useCallback((durationSec: number, startOffset: number = 0) => {
     clearProgressTimer();
-    speechStartRef.current = Date.now();
+    speechStartRef.current = Date.now() - (startOffset * 1000);
     estimatedDurRef.current = durationSec;
     setSpeechDuration(durationSec);
-    setSpeechProgress(0);
-    setSpeechCurrentTime(0);
+    setSpeechProgress(durationSec > 0 ? (startOffset / durationSec) * 100 : 0);
+    setSpeechCurrentTime(startOffset);
 
     progressTimerRef.current = setInterval(() => {
       const elapsed = (Date.now() - speechStartRef.current) / 1000;
@@ -153,12 +193,17 @@ export function useAIListening(): UseAIListeningReturn {
     }, 200);
   }, [clearProgressTimer]);
 
-  const speakLesson = useCallback((passageText: string, rate: number, vIdx: number) => {
+  const speakLesson = useCallback((passageText: string, rate: number, vIdx: number, startIndex: number = 0) => {
     if (typeof window === 'undefined') return;
     window.speechSynthesis.cancel();
     clearProgressTimer();
 
-    const utter = new SpeechSynthesisUtterance(passageText);
+    if (startIndex === 0) {
+      charIndexRef.current = 0;
+    }
+
+    const textToSpeak = startIndex > 0 ? passageText.substring(startIndex) : passageText;
+    const utter = new SpeechSynthesisUtterance(textToSpeak);
     utter.lang = 'en-US';
     utter.rate = rate;
 
@@ -167,12 +212,19 @@ export function useAIListening(): UseAIListeningReturn {
       utter.voice = voices[vIdx];
     }
 
+    utter.onboundary = (e) => {
+      charIndexRef.current = startIndex + e.charIndex;
+    };
+
     utter.onstart = () => {
       setIsSpeaking(true);
       setIsPaused(false);
-      setPlayCount((p) => p + 1);
-      const dur = estimateDuration(passageText, rate);
-      startProgressTimer(dur);
+      if (startIndex === 0) {
+        setPlayCount((p) => p + 1);
+      }
+      const totalDur = estimateDuration(passageText, rate);
+      const startOffset = passageText.length > 0 ? (startIndex / passageText.length) * totalDur : 0;
+      startProgressTimer(totalDur, startOffset);
     };
 
     utter.onend = () => {
@@ -208,10 +260,7 @@ export function useAIListening(): UseAIListeningReturn {
       synth.resume();
       setIsPaused(false);
       // Resume timer from current position
-      const remaining = estimatedDurRef.current - speechCurrentTime;
-      speechStartRef.current = Date.now() - speechCurrentTime * 1000;
-      startProgressTimer(estimatedDurRef.current);
-      void remaining;
+      startProgressTimer(estimatedDurRef.current, speechCurrentTime);
       return;
     }
 
@@ -223,12 +272,17 @@ export function useAIListening(): UseAIListeningReturn {
 
   const stopSpeech = useCallback(() => {
     if (typeof window === 'undefined') return;
+    if (utterRef.current) {
+      utterRef.current.onend = null;
+      utterRef.current.onerror = null;
+    }
     window.speechSynthesis.cancel();
     clearProgressTimer();
     setIsSpeaking(false);
     setIsPaused(false);
     setSpeechProgress(0);
     setSpeechCurrentTime(0);
+    charIndexRef.current = 0;
   }, [clearProgressTimer]);
 
   const generate = useCallback(async () => {
@@ -258,14 +312,14 @@ export function useAIListening(): UseAIListeningReturn {
         score: 0,
       }).then(res => {
         setCurrentHistoryId(res.id);
+        if (typeof window !== 'undefined') {
+          window.history.pushState({}, '', `?id=${res.id}`);
+        }
       }).catch(err => {
         console.error('Failed to save initial listening history:', err);
       });
 
-      // Auto-play sau 600ms để trang render xong
-      setTimeout(() => {
-        speakLesson(result.passage, playbackRate, voiceIndex);
-      }, 600);
+      // Không auto-play — người dùng tự bấm Play
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Lỗi không xác định.';
       setErrorMsg(msg);
@@ -319,13 +373,21 @@ export function useAIListening(): UseAIListeningReturn {
     setTotalScore(0);
     setErrorMsg('');
     setShowTranscript(false);
+    setShowBilingual(false);
     setPlayCount(0);
     setSpeechProgress(0);
     setSpeechCurrentTime(0);
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', window.location.pathname);
+    }
   }, [stopSpeech]);
 
   const toggleTranscript = useCallback(() => {
     setShowTranscript((p) => !p);
+  }, []);
+
+  const toggleBilingual = useCallback(() => {
+    setShowBilingual((p) => !p);
   }, []);
 
   const loadHistoryReview = useCallback((historyItem: any) => {
@@ -360,13 +422,43 @@ export function useAIListening(): UseAIListeningReturn {
     window.speechSynthesis.speak(u);
   }, [voiceIndex, playbackRate]);
 
+  const seekTo = useCallback((pct: number) => {
+    if (!lesson) return;
+    const passage = lesson.passage;
+    const clampedPct = Math.max(0, Math.min(100, pct));
+    const charIndex = Math.floor((clampedPct / 100) * passage.length);
+    const timeSec = (clampedPct / 100) * estimatedDurRef.current;
+
+    // Cập nhật UI ngay lập tức
+    setSpeechProgress(clampedPct);
+    setSpeechCurrentTime(timeSec);
+    charIndexRef.current = charIndex;
+
+    if (isSpeaking || isPaused) {
+      // Hủy utterance cũ, speak lại từ charIndex mới
+      if (utterRef.current) {
+        utterRef.current.onend = null;
+        utterRef.current.onerror = null;
+      }
+      window.speechSynthesis.cancel();
+      clearProgressTimer();
+      setIsPaused(false);
+      setTimeout(() => speakLesson(passage, playbackRate, voiceIndex, charIndex), 80);
+    }
+  }, [lesson, isSpeaking, isPaused, playbackRate, voiceIndex, speakLesson, clearProgressTimer]);
+
   const handleSetPlaybackRate = useCallback((rate: number) => {
     setPlaybackRate(rate);
     if (isSpeaking && lesson) {
-      stopSpeech();
-      setTimeout(() => speakLesson(lesson.passage, rate, voiceIndex), 100);
+      const currentIndex = charIndexRef.current;
+      if (utterRef.current) {
+        utterRef.current.onend = null;
+        utterRef.current.onerror = null;
+      }
+      window.speechSynthesis.cancel();
+      setTimeout(() => speakLesson(lesson.passage, rate, voiceIndex, currentIndex), 100);
     }
-  }, [isSpeaking, lesson, stopSpeech, speakLesson, voiceIndex]);
+  }, [isSpeaking, lesson, speakLesson, voiceIndex]);
 
   const handleSetVoiceIndex = useCallback((idx: number) => {
     setVoiceIndex(idx);
@@ -392,6 +484,7 @@ export function useAIListening(): UseAIListeningReturn {
     selectedVoiceIndex,
     playbackRate,
     showTranscript,
+    showBilingual,
     answeredCount,
     topic,
     level,
@@ -405,12 +498,14 @@ export function useAIListening(): UseAIListeningReturn {
     generate,
     playPause,
     stopSpeech,
+    seekTo,
     setAnswer,
     submitQuiz,
     retryQuiz,
     startQuiz,
     resetAll,
     toggleTranscript,
+    toggleBilingual,
     previewVoice,
     loadHistoryReview,
   };

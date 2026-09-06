@@ -2,11 +2,12 @@
 // components/pages/listening/AIListeningPage.tsx
 // Thay thế DictationPage.tsx — luyện nghe AI với Gemini
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import {
   Headphones, Play, Pause, RotateCcw, ChevronRight,
   Sparkles, Volume2, VolumeX, Eye, EyeOff, Settings,
   CheckCircle2, XCircle, AlertCircle, ArrowLeft, Mic,
+  SkipBack, SkipForward,
 } from 'lucide-react';
 import { useAIListening } from '@/components/hooks/useAIListening';
 import {
@@ -48,71 +49,134 @@ const AudioPlayer: React.FC<{
   onPlayPause: () => void;
   onStop: () => void;
   onSetRate: (r: number) => void;
+  onSeek: (pct: number) => void;
 }> = ({
   isSpeaking, isPaused, playCount, progress,
   currentTime, duration, playbackRate,
-  onPlayPause, onStop, onSetRate,
+  onPlayPause, onStop, onSetRate, onSeek,
 }) => {
     const isActive = isSpeaking || isPaused;
     const rates = [0.75, 1, 1.25, 1.5];
 
+    // ── Seek logic ────────────────────────────────────────────────
+    const trackRef = useRef<HTMLDivElement>(null);
+    const isDraggingRef = useRef(false);
+    const [isHoveringTrack, setIsHoveringTrack] = useState(false);
+
+    const getPctFromEvent = useCallback((clientX: number): number => {
+      if (!trackRef.current) return 0;
+      const rect = trackRef.current.getBoundingClientRect();
+      const raw = (clientX - rect.left) / rect.width;
+      return Math.max(0, Math.min(100, raw * 100));
+    }, []);
+
+    const handleTrackMouseDown = useCallback((e: React.MouseEvent) => {
+      e.preventDefault();
+      isDraggingRef.current = true;
+      onSeek(getPctFromEvent(e.clientX));
+    }, [onSeek, getPctFromEvent]);
+
+    useEffect(() => {
+      const handleMouseMove = (e: MouseEvent) => {
+        if (!isDraggingRef.current) return;
+        onSeek(getPctFromEvent(e.clientX));
+      };
+      const handleMouseUp = () => {
+        isDraggingRef.current = false;
+      };
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
+    }, [onSeek, getPctFromEvent]);
+
+    const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        if (duration <= 0) return;
+        const delta = (5 / duration) * 100;
+        onSeek(Math.min(100, progress + delta));
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        if (duration <= 0) return;
+        const delta = (5 / duration) * 100;
+        onSeek(Math.max(0, progress - delta));
+      }
+    }, [duration, progress, onSeek]);
+
     return (
       <div className="glass-card p-5 border border-white/[0.08] space-y-4">
-        {/* Status row */}
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-            <Volume2 size={13} />
-            Bài nghe
-          </span>
-          {playCount > 0 && (
-            <span className="text-xs text-slate-500">
-              Đã nghe <span className="text-slate-300 font-semibold">{playCount}</span> lần
-            </span>
-          )}
-        </div>
-
         {/* Play button + progress */}
         <div className="flex items-center gap-4">
-          <button
-            onClick={onPlayPause}
-            className="w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0 transition-all hover:scale-105 active:scale-95"
-            style={{ background: 'linear-gradient(135deg, #6366f1 0%, #22d3ee 100%)' }}
-            aria-label={isActive && !isPaused ? 'Tạm dừng' : 'Phát'}
-          >
-            {isActive && !isPaused
-              ? <Pause size={22} className="text-white" />
-              : <Play size={22} className="text-white ml-0.5" />
-            }
-          </button>
-
-          <div className="flex-1 space-y-1.5">
-            <div className="h-1.5 bg-white/[0.07] rounded-full overflow-hidden cursor-pointer">
-              <div
-                className="h-full rounded-full transition-all duration-200"
-                style={{
-                  width: `${progress}%`,
-                  background: 'linear-gradient(90deg, #6366f1, #22d3ee)',
-                }}
-              />
-            </div>
-            <div className="flex justify-between text-xs text-slate-500">
-              <span>{fmtTime(currentTime)}</span>
-              <span className={isActive && !isPaused ? 'text-accent-cyan animate-pulse' : ''}>
-                {isActive && !isPaused ? '▶ Đang phát...' : isPaused ? '⏸ Tạm dừng' : duration > 0 ? 'Đã xong' : 'Chưa phát'}
-              </span>
-              <span>{fmtTime(duration)}</span>
-            </div>
+          {/* Skip -5s | Play | Skip +5s */}
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <button
+              onClick={() => duration > 0 && onSeek(Math.max(0, progress - (5 / duration) * 100))}
+              className="p-1.5 rounded-full text-slate-400 hover:text-slate-200 hover:bg-white/[0.08] transition-all"
+              title="Lùi 5 giây (←)"
+              aria-label="Lùi 5 giây"
+            >
+              <SkipBack size={16} />
+            </button>
+            <button
+              onClick={onPlayPause}
+              className="w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+              style={{ background: 'linear-gradient(135deg, #6366f1 0%, #22d3ee 100%)' }}
+              aria-label={isActive && !isPaused ? 'Tạm dừng' : 'Phát'}
+            >
+              {isActive && !isPaused
+                ? <Pause size={22} className="text-white" />
+                : <Play size={22} className="text-white ml-0.5" />
+              }
+            </button>
+            <button
+              onClick={() => duration > 0 && onSeek(Math.min(100, progress + (5 / duration) * 100))}
+              className="p-1.5 rounded-full text-slate-400 hover:text-slate-200 hover:bg-white/[0.08] transition-all"
+              title="Tiến 5 giây (→)"
+              aria-label="Tiến 5 giây"
+            >
+              <SkipForward size={16} />
+            </button>
           </div>
 
-          {isActive && (
-            <button
-              onClick={onStop}
-              className="p-2 glass-card border border-white/[0.08] rounded-lg text-slate-400 hover:text-slate-200 transition-colors"
-              title="Dừng"
-            >
-              <VolumeX size={15} />
-            </button>
-          )}
+          <div className="flex-1 space-y-2">
+            {/* Seek track */}
+            <div className="relative flex items-center group">
+              <div
+                ref={trackRef}
+                role="slider"
+                aria-label="Tua audio"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(progress)}
+                tabIndex={0}
+                className="relative flex-1 h-2 rounded-full cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-accent-indigo/60"
+                style={{ background: 'rgba(255,255,255,0.07)' }}
+                onMouseDown={handleTrackMouseDown}
+                onMouseEnter={() => setIsHoveringTrack(true)}
+                onMouseLeave={() => setIsHoveringTrack(false)}
+                onKeyDown={handleKeyDown}
+              >
+                {/* Filled bar */}
+                <div
+                  className="absolute inset-y-0 left-0 rounded-full transition-[width] duration-100"
+                  style={{
+                    width: `${progress}%`,
+                    background: 'linear-gradient(90deg, #6366f1, #22d3ee)',
+                  }}
+                />
+                {/* Thumb */}
+                <div
+                  className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-white shadow-lg transition-opacity duration-150 pointer-events-none ${
+                    isHoveringTrack || isDraggingRef.current ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                  }`}
+                  style={{ left: `${progress}%` }}
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Speed */}
@@ -137,31 +201,85 @@ const AudioPlayer: React.FC<{
     );
   };
 
+// ─── helpers ─────────────────────────────────────────────────────────────────
+
+/** Tách đoạn văn thành mảng câu theo dấu kết câu */
+function splitSentences(text: string): string[] {
+  return text
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 // ─── TranscriptPanel ──────────────────────────────────────────────────────────
 
 const TranscriptPanel: React.FC<{
   passage: string;
+  passageVi: string;
   show: boolean;
+  showBilingual: boolean;
   onToggle: () => void;
-}> = ({ passage, show, onToggle }) => (
-  <div>
-    <button
-      onClick={onToggle}
-      className="flex items-center gap-1.5 text-xs text-accent-indigo-light hover:text-accent-cyan transition-colors py-1"
-    >
-      {show ? <EyeOff size={13} /> : <Eye size={13} />}
-      {show ? 'Ẩn nội dung bài nghe' : 'Hiện nội dung bài nghe'}
-    </button>
-    {show && (
-      <div className="mt-2 p-4 glass-card border border-accent-indigo/15 rounded-xl animate-fadeIn">
-        <p className="text-xs font-semibold text-accent-indigo-light mb-2 uppercase tracking-wider">
-          📝 Transcript
-        </p>
-        <p className="text-slate-200 leading-relaxed text-sm">{passage}</p>
+  onToggleBilingual: () => void;
+}> = ({ passage, passageVi, show, showBilingual, onToggle, onToggleBilingual }) => {
+  const hasVi = Boolean(passageVi);
+  const enSentences = splitSentences(passage);
+  const viSentences = splitSentences(passageVi);
+
+  return (
+    <div>
+      {/* Toggle row */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onToggle}
+          className="flex items-center gap-1.5 text-xs text-accent-indigo-light hover:text-accent-cyan transition-colors py-1"
+        >
+          {show ? <EyeOff size={13} /> : <Eye size={13} />}
+          {show ? 'Ẩn nội dung bài nghe' : 'Hiện nội dung bài nghe'}
+        </button>
+
+        {show && hasVi && (
+          <button
+            onClick={onToggleBilingual}
+            className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg border transition-all ${
+              showBilingual
+                ? 'bg-accent-cyan/10 border-accent-cyan/40 text-accent-cyan'
+                : 'glass-card border-white/[0.08] text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            🌐 Song ngữ
+          </button>
+        )}
       </div>
-    )}
-  </div>
-);
+
+      {show && (
+        <div className="mt-2 p-4 glass-card border border-accent-indigo/15 rounded-xl animate-fadeIn space-y-1">
+          <p className="text-xs font-semibold text-accent-indigo-light mb-3 uppercase tracking-wider">
+            📝 Transcript
+          </p>
+
+          {showBilingual && hasVi ? (
+            // ─ Song ngữ: từng cặp câu EN + VI ─
+            <div className="space-y-3">
+              {enSentences.map((en, i) => (
+                <div key={i} className="space-y-0.5">
+                  <p className="text-slate-200 leading-relaxed text-sm">{en}</p>
+                  {viSentences[i] && (
+                    <p className="text-accent-cyan/75 leading-relaxed text-xs italic pl-2 border-l-2 border-accent-cyan/25">
+                      {viSentences[i]}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            // ─ Chỉ tiếng Anh ─
+            <p className="text-slate-200 leading-relaxed text-sm">{passage}</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 // ─── QuizSection ──────────────────────────────────────────────────────────────
 
@@ -550,16 +668,19 @@ const ReadyScreen: React.FC<{
   duration: number;
   playbackRate: number;
   showTranscript: boolean;
+  showBilingual: boolean;
   onPlayPause: () => void;
   onStop: () => void;
   onSetRate: (r: number) => void;
+  onSeek: (pct: number) => void;
   onToggleTranscript: () => void;
+  onToggleBilingual: () => void;
   onStartQuiz: () => void;
   onReset: () => void;
 }> = ({
   lesson, isSpeaking, isPaused, playCount, progress,
-  currentTime, duration, playbackRate, showTranscript,
-  onPlayPause, onStop, onSetRate, onToggleTranscript, onStartQuiz, onReset,
+  currentTime, duration, playbackRate, showTranscript, showBilingual,
+  onPlayPause, onStop, onSetRate, onSeek, onToggleTranscript, onToggleBilingual, onStartQuiz, onReset,
 }) => (
     <div className="space-y-4 animate-fadeIn">
       {/* Header */}
@@ -575,11 +696,6 @@ const ReadyScreen: React.FC<{
             {lesson.level}
           </span>
         </div>
-        <div className="flex items-center gap-3 text-xs text-slate-400">
-          <span>📝 {lesson.passage.split(/\s+/).length} từ</span>
-          <span>•</span>
-          <span>❓ {lesson.questions.length} câu hỏi</span>
-        </div>
       </div>
 
       {/* Audio player */}
@@ -594,13 +710,17 @@ const ReadyScreen: React.FC<{
         onPlayPause={onPlayPause}
         onStop={onStop}
         onSetRate={onSetRate}
+        onSeek={onSeek}
       />
 
       {/* Transcript */}
       <TranscriptPanel
         passage={lesson.passage}
+        passageVi={lesson.passageVi ?? ''}
         show={showTranscript}
+        showBilingual={showBilingual}
         onToggle={onToggleTranscript}
+        onToggleBilingual={onToggleBilingual}
       />
 
       {/* Actions */}
@@ -635,6 +755,7 @@ const QuizScreen: React.FC<{
   duration: number;
   playbackRate: number;
   showTranscript: boolean;
+  showBilingual: boolean;
   userAnswers: Record<number, string>;
   quizResults: QuizResult[];
   isSubmitted: boolean;
@@ -643,15 +764,17 @@ const QuizScreen: React.FC<{
   onPlayPause: () => void;
   onStop: () => void;
   onSetRate: (r: number) => void;
+  onSeek: (pct: number) => void;
   onToggleTranscript: () => void;
+  onToggleBilingual: () => void;
   onAnswer: (id: number, ans: string) => void;
   onSubmit: () => void;
   onRetry: () => void;
   onReset: () => void;
 }> = ({
   lesson, isSpeaking, isPaused, playCount, progress, currentTime, duration,
-  playbackRate, showTranscript, userAnswers, quizResults, isSubmitted, totalScore,
-  answeredCount, onPlayPause, onStop, onSetRate, onToggleTranscript,
+  playbackRate, showTranscript, showBilingual, userAnswers, quizResults, isSubmitted, totalScore,
+  answeredCount, onPlayPause, onStop, onSetRate, onSeek, onToggleTranscript, onToggleBilingual,
   onAnswer, onSubmit, onRetry, onReset,
 }) => (
     <div className="space-y-4 animate-fadeIn">
@@ -680,12 +803,16 @@ const QuizScreen: React.FC<{
         onPlayPause={onPlayPause}
         onStop={onStop}
         onSetRate={onSetRate}
+        onSeek={onSeek}
       />
 
       <TranscriptPanel
         passage={lesson.passage}
+        passageVi={lesson.passageVi ?? ''}
         show={showTranscript}
+        showBilingual={showBilingual}
         onToggle={onToggleTranscript}
+        onToggleBilingual={onToggleBilingual}
       />
 
       {/* Score card if submitted */}
@@ -829,12 +956,12 @@ export const AIListeningPage: React.FC = () => {
   const {
     status, errorMsg, lesson,
     isSpeaking, isPaused, playCount, speechProgress, speechCurrentTime, speechDuration,
-    playbackRate, showTranscript, availableVoices,
+    playbackRate, showTranscript, showBilingual, availableVoices,
     userAnswers, quizResults, totalScore, answeredCount,
     topic, level, questionCount, voiceIndex,
     setTopic, setLevel, setQuestionCount, setVoiceIndex, setPlaybackRate,
-    generate, playPause, stopSpeech, setAnswer, submitQuiz, retryQuiz, startQuiz, resetAll,
-    toggleTranscript, previewVoice, loadHistoryReview,
+    generate, playPause, stopSpeech, seekTo, setAnswer, submitQuiz, retryQuiz, startQuiz, resetAll,
+    toggleTranscript, toggleBilingual, previewVoice, loadHistoryReview,
   } = useAIListening();
 
   return (
@@ -899,10 +1026,13 @@ export const AIListeningPage: React.FC = () => {
           duration={speechDuration}
           playbackRate={playbackRate}
           showTranscript={showTranscript}
+          showBilingual={showBilingual}
           onPlayPause={playPause}
           onStop={stopSpeech}
           onSetRate={setPlaybackRate}
+          onSeek={seekTo}
           onToggleTranscript={toggleTranscript}
+          onToggleBilingual={toggleBilingual}
           onStartQuiz={startQuiz}
           onReset={resetAll}
         />
@@ -919,6 +1049,7 @@ export const AIListeningPage: React.FC = () => {
           duration={speechDuration}
           playbackRate={playbackRate}
           showTranscript={showTranscript}
+          showBilingual={showBilingual}
           userAnswers={userAnswers}
           quizResults={quizResults}
           isSubmitted={status === 'submitted'}
@@ -927,7 +1058,9 @@ export const AIListeningPage: React.FC = () => {
           onPlayPause={playPause}
           onStop={stopSpeech}
           onSetRate={setPlaybackRate}
+          onSeek={seekTo}
           onToggleTranscript={toggleTranscript}
+          onToggleBilingual={toggleBilingual}
           onAnswer={setAnswer}
           onSubmit={submitQuiz}
           onRetry={retryQuiz}

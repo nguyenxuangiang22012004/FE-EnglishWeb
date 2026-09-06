@@ -56,8 +56,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     if (!isOpen) return null;
 
     const handleSave = () => {
+        let finalModelId = selectedModel.trim();
+        
+        // Cố gắng tìm model theo tên (bỏ qua hoa/thường)
+        const matchedModel = AI_MODELS.find(m => m.name.toLowerCase() === finalModelId.toLowerCase());
+        
+        if (matchedModel) {
+            finalModelId = matchedModel.id;
+        } else {
+            // Tự động chuyển đổi: chữ thường, thay khoảng trắng bằng dấu gạch ngang
+            finalModelId = finalModelId
+                .toLowerCase()
+                .replace(/\s+/g, '-')
+                .replace(/[^a-z0-9.-]/g, '');
+        }
+
         localStorage.setItem('gemini_api_key', apiKey.trim());
-        localStorage.setItem('gemini_model_id', selectedModel);
+        localStorage.setItem('gemini_model_id', finalModelId);
+        
+        // Cập nhật lại state để hiển thị id chuẩn nếu người dùng mở lại
+        setSelectedModel(finalModelId);
+        
         setIsSaved(true);
         setTimeout(() => {
             onClose();
@@ -103,18 +122,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         <label className="block text-sm font-medium text-slate-300 mb-2">
                             Mô hình AI (Model)
                         </label>
-                        <select
+                        <input
+                            type="text"
                             value={selectedModel}
                             onChange={(e) => setSelectedModel(e.target.value)}
-                            className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-gray-800 focus:outline-none focus:border-accent-indigo transition-colors appearance-none"
-                        >
-                            <option value="gemini-1.5-pro">Gemini 1.5 Pro (Mặc định cũ)</option>
-                            {AI_MODELS.map(model => (
-                                <option key={model.id} value={model.id}>
-                                    {model.name}
-                                </option>
-                            ))}
-                        </select>
+                            placeholder="Nhập tên mô hình AI (VD: gemini-2.5-flash)..."
+                            className="w-full bg-surface-950 border border-white/10 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-accent-indigo transition-colors"
+                        />
                     </div>
 
                     <div className="pt-4 border-t border-white/[0.04]">

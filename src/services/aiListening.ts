@@ -15,6 +15,7 @@ export interface ListeningLesson {
   topic: string;
   level: CEFRLevel;
   passage: string;
+  passageVi: string; // bản dịch tiếng Việt của passage
   questions: ListeningQuestion[];
 }
 
@@ -38,9 +39,130 @@ function getGeminiKey(): string {
 }
 
 function getGeminiModel(): string {
-  if (typeof window === 'undefined') return 'gemini-1.5-pro';
-  return localStorage.getItem('gemini_model_id') || 'gemini-1.5-pro';
+  if (typeof window === 'undefined') return 'gemini-2.5-flash';
+  return localStorage.getItem('gemini_model_id') || 'gemini-2.5-flash';
 }
+
+// ─── Validation & Normalization ───────────────────────────────────────────────
+
+/**
+ * Kiểm tra và chuẩn hóa dữ liệu trả về từ AI model.
+ * Đảm bảo luôn đúng cấu trúc ListeningLesson dù AI trả về format không chuẩn.
+ */
+function validateAndNormalize(
+  parsed: unknown,
+  topic: string,
+  level: CEFRLevel,
+  questionCount: number
+): Omit<ListeningLesson, 'topic' | 'level'> {
+  if (!parsed || typeof parsed !== 'object') {
+    throw new Error('Dữ liệu từ AI không phải object hợp lệ.');
+  }
+
+  const raw = parsed as Record<string, unknown>;
+
+  // --- title ---
+  const title =
+    typeof raw['title'] === 'string' && raw['title'].trim()
+      ? raw['title'].trim()
+      : `${level} Listening: ${topic.slice(0, 40)}`;
+
+  // --- passage ---
+  const passage =
+    typeof raw['passage'] === 'string' && raw['passage'].trim()
+      ? raw['passage'].trim()
+      : '';
+
+  if (!passage) {
+    throw new Error('AI không tạo được đoạn văn bài nghe. Vui lòng thử lại.');
+  }
+
+  // --- questions ---
+  if (!Array.isArray(raw['questions']) || raw['questions'].length === 0) {
+    throw new Error('AI không tạo được câu hỏi. Vui lòng thử lại.');
+  }
+
+  const VALID_ANSWERS = ['A', 'B', 'C', 'D'];
+  const OPTION_PREFIXES = ['A. ', 'B. ', 'C. ', 'D. '];
+
+  const questions: ListeningQuestion[] = (raw['questions'] as unknown[])
+    .slice(0, questionCount)
+    .map((q, index) => {
+      if (!q || typeof q !== 'object') {
+        throw new Error(`Câu hỏi số ${index + 1} không hợp lệ.`);
+      }
+
+      const qRaw = q as Record<string, unknown>;
+
+      // id: ép về number, fallback là index + 1
+      const id =
+        typeof qRaw['id'] === 'number'
+          ? qRaw['id']
+          : typeof qRaw['id'] === 'string' && !isNaN(Number(qRaw['id']))
+            ? Number(qRaw['id'])
+            : index + 1;
+
+      // question text
+      const questionText =
+        typeof qRaw['question'] === 'string' && qRaw['question'].trim()
+          ? qRaw['question'].trim()
+          : `Question ${id}`;
+
+      // options: đảm bảo đúng 4 phần tử format "A. ...", "B. ...", "C. ...", "D. ..."
+      let options: string[] = [];
+
+      if (Array.isArray(qRaw['options'])) {
+        options = (qRaw['options'] as unknown[]).slice(0, 4).map((opt, i) => {
+          const prefix = OPTION_PREFIXES[i];
+          const optStr = typeof opt === 'string' ? opt.trim() : `Option ${VALID_ANSWERS[i]}`;
+
+          // Nếu đã có prefix đúng rồi thì giữ nguyên
+          if (optStr.startsWith(prefix)) return optStr;
+
+          // Nếu có prefix khác (VD: "A) ..." hoặc "a. ...") thì chuẩn hóa
+          const stripped = optStr.replace(/^[A-Da-d][.):\s]+/, '').trim();
+          return `${prefix}${stripped}`;
+        });
+      }
+
+      // Điền đủ 4 options nếu thiếu
+      while (options.length < 4) {
+        options.push(`${OPTION_PREFIXES[options.length]}(No option provided)`);
+      }
+
+      // answer: chỉ lấy ký tự đầu tiên, uppercase
+      // Xử lý các case lạ: "Answer: A", "a", "A.", "(A)", v.v.
+      let answer = 'A';
+      if (typeof qRaw['answer'] === 'string') {
+        const answerRaw = qRaw['answer'].trim().toUpperCase();
+        // Tìm ký tự A/B/C/D đầu tiên trong chuỗi
+        const match = answerRaw.match(/[A-D]/);
+        if (match) answer = match[0];
+      }
+
+      // explanation
+      const explanation =
+        typeof qRaw['explanation'] === 'string' && qRaw['explanation'].trim()
+          ? qRaw['explanation'].trim()
+          : `The correct answer is ${answer}.`;
+
+      return { id, question: questionText, options, answer, explanation };
+    });
+
+  if (questions.length === 0) {
+    throw new Error('Bài nghe tạo ra không có câu hỏi hợp lệ. Vui lòng thử lại.');
+  }
+
+  // --- passageVi ---
+  const passageVi =
+    typeof raw['passageVi'] === 'string' && raw['passageVi'].trim()
+      ? raw['passageVi'].trim()
+      : ''; // fallback rỗng — không throw error, UI sẽ ẩn nút song ngữ nếu trống
+
+  return { title, passage, passageVi, questions };
+}
+
+// ─── Generate ─────────────────────────────────────────────────────────────────
 
 export async function generateListeningLesson(
   topic: string,
@@ -60,31 +182,45 @@ export async function generateListeningLesson(
 
   const prompt = `You are an expert English listening comprehension test creator for Vietnamese learners.
 
+TASK: Generate a listening lesson in STRICT JSON format.
+
 Topic: "${topic}"
 CEFR Level: ${level}
-Passage length: ${wordCountMap[level]} words
-Number of questions: ${questionCount}
+Passage length: approximately ${wordCountMap[level]} words
+Number of questions: exactly ${questionCount}
 
-Instructions:
-- Write a natural, engaging English passage suitable for ${level} learners
-- The passage must sound natural and clear when read aloud by a text-to-speech engine
-- Avoid complex abbreviations or symbols that TTS reads poorly
-- Create ${questionCount} multiple-choice questions testing comprehension (not just vocabulary)
-- Questions should test: main idea, specific details, inference, vocabulary in context
-- Each question has exactly 4 options (A, B, C, D) with only one correct answer
-- Add a brief one-sentence explanation for each answer
+CRITICAL JSON REQUIREMENTS — follow every rule exactly:
+1. Output ONLY a raw JSON object. Do NOT include markdown, code fences (\`\`\`), or any text outside the JSON.
+2. The root object must have exactly these 4 keys: "title", "passage", "passageVi", "questions".
+3. "title": a string, 5–8 words describing the passage topic.
+4. "passage": a string containing the full English passage. Must be natural and clear for TTS. No markdown inside.
+5. "passageVi": a string containing the complete Vietnamese translation of the passage. Translate naturally and fluently. Match sentence count and order with the English passage. No markdown inside.
+6. "questions": a JSON array of exactly ${questionCount} objects. Each object must have:
+   - "id": an integer starting from 1 (e.g., 1, 2, 3...)
+   - "question": a string with the question text
+   - "options": a JSON array of EXACTLY 4 strings. Each string MUST start with the letter prefix exactly as shown: "A. ", "B. ", "C. ", "D. " (capital letter, period, space). Example: ["A. London", "B. Paris", "C. Tokyo", "D. Sydney"]
+   - "answer": a single UPPERCASE letter string — ONLY one of: "A", "B", "C", or "D". No other characters.
+   - "explanation": a string with a one-sentence explanation of why the answer is correct.
 
-Respond ONLY with a valid JSON object (no markdown, no code fences, no extra text):
+WHAT NOT TO DO:
+- Do NOT wrap the JSON in any extra object or array
+- Do NOT add any keys other than the ones specified
+- Do NOT use "Answer: A" or "(A)" format — only a single character like "A"
+- Do NOT leave any field empty or null
+- Do NOT add any commentary before or after the JSON
+
+EXAMPLE of valid output (use this exact structure):
 {
-  "title": "Concise descriptive title (5-8 words)",
-  "passage": "Full passage text here...",
+  "title": "Daily Life at a Coffee Shop",
+  "passage": "Every morning, Sara visits the small coffee shop on Maple Street. She orders a latte and reads the newspaper before heading to work.",
+  "passageVi": "Mỗi sáng, Sara đến quán cà phê nhỏ trên phố Maple. Cô gọi một ly latte và đọc báo trước khi đi làm.",
   "questions": [
     {
       "id": 1,
-      "question": "What is the main idea of the passage?",
-      "options": ["A. First option", "B. Second option", "C. Third option", "D. Fourth option"],
-      "answer": "A",
-      "explanation": "The passage mainly discusses..."
+      "question": "Where does Sara visit every morning?",
+      "options": ["A. A bakery on Oak Street", "B. A coffee shop on Maple Street", "C. A library on Pine Avenue", "D. A park near her home"],
+      "answer": "B",
+      "explanation": "The passage states that Sara visits the coffee shop on Maple Street every morning."
     }
   ]
 }`;
@@ -97,7 +233,7 @@ Respond ONLY with a valid JSON object (no markdown, no code fences, no extra tex
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
-          temperature: 0.75,
+          temperature: 0.7,
           maxOutputTokens: 2048,
           responseMimeType: 'application/json',
         },
@@ -115,21 +251,27 @@ Respond ONLY with a valid JSON object (no markdown, no code fences, no extra tex
   let raw: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
 
   // Strip markdown fences if Gemini returns them despite responseMimeType
-  raw = raw.replace(/```json[\s\S]*?```/g, (m: string) => m.slice(m.indexOf('\n') + 1, m.lastIndexOf('```')));
-  raw = raw.replace(/```[\s\S]*?```/g, '').trim();
+  raw = raw
+    .replace(/```json[\s\S]*?```/g, (m: string) => m.slice(m.indexOf('\n') + 1, m.lastIndexOf('```')))
+    .replace(/```[\s\S]*?```/g, '')
+    .trim();
 
-  let parsed: Omit<ListeningLesson, 'topic' | 'level'>;
+  // Trích xuất JSON object đầu tiên nếu AI có text thừa bao quanh
+  const jsonStart = raw.indexOf('{');
+  const jsonEnd = raw.lastIndexOf('}');
+  if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+    raw = raw.slice(jsonStart, jsonEnd + 1);
+  }
+
+  let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
-    throw new Error('Gemini trả về dữ liệu không hợp lệ. Vui lòng thử lại.');
+    throw new Error('Gemini trả về dữ liệu không phải JSON hợp lệ. Vui lòng thử lại.');
   }
 
-  if (!parsed.passage || !Array.isArray(parsed.questions) || parsed.questions.length === 0) {
-    throw new Error('Bài nghe tạo ra bị thiếu dữ liệu. Vui lòng thử lại.');
-  }
-
-  return { ...parsed, topic, level };
+  const normalized = validateAndNormalize(parsed, topic, level, questionCount);
+  return { ...normalized, topic, level };
 }
 
 // ─── Scoring ───────────────────────────────────────────────────────────────────
@@ -208,5 +350,10 @@ export async function updateListeningHistory(id: string, data: Partial<SaveAiLis
 
 export async function getListeningHistory(page = 0, size = 10): Promise<PaginatedResponse<AiListeningHistoryResponse>> {
   const res = await axios.get('/ai-listening/history', { params: { page, size } });
+  return res.data.data;
+}
+
+export async function getListeningHistoryById(id: string): Promise<AiListeningHistoryResponse> {
+  const res = await axios.get(`/ai-listening/history/${id}`);
   return res.data.data;
 }

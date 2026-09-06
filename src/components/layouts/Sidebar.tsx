@@ -44,7 +44,6 @@ export const Sidebar: React.FC = () => {
             title: 'CỘNG ĐỒNG & TIẾN ĐỘ',
             items: [
                 { href: '/groups', label: 'Nhóm học', icon: <Trophy size={18} />, badge: 'Mới' },
-                { href: '/progress', label: 'Tiến trình học', icon: <BarChart2 size={18} /> },
             ]
         }
     ];
