@@ -2,19 +2,37 @@
 
 import React, { useState } from 'react';
 import { useImportVocabulary } from '@/components/hooks/useImportVocabulary';
+import { useAIImport } from '@/components/hooks/useAIImport';
 import { DeckSelectModal } from '@/components/ui/DeckSelectModal';
+import { ImportTabAITopic } from './import/ImportTabAITopic';
+import { ImportTabAIImage } from './import/ImportTabAIImage';
+import { AIVocabItem } from '@/services/importAIService';
+
+// ─── Tab config ───────────────────────────────────────────────────────────────
+
+const TABS = [
+    { id: 'topic' as const, label: '✨ Nhập chủ đề', color: 'indigo' },
+    { id: 'image' as const, label: '🖼️ Upload ảnh', color: 'cyan' },
+];
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export const ImportVocabularyPage: React.FC = () => {
     const {
         state,
         allSelected,
-        handleTextChange,
+        setWordsFromAI,
         toggleWordSelection,
         toggleSelectAll,
-        copyJson,
         clearAll,
         getSelectedCards,
     } = useImportVocabulary();
+
+    const handleAISuccess = (items: AIVocabItem[]) => {
+        setWordsFromAI(items);
+    };
+
+    const aiImport = useAIImport(handleAISuccess);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -31,40 +49,83 @@ export const ImportVocabularyPage: React.FC = () => {
         clearAll();
     };
 
+    const handleClearAll = () => {
+        clearAll();
+        aiImport.handleRemoveImage();
+    };
+
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 max-w-5xl mx-auto">
             {/* Header */}
             <div className="flex justify-between items-center">
                 <h1 className="text-3xl font-display font-bold text-slate-100">
-                    📥 Import Từ Vựng
+                    🤖 Import từ vựng bằng AI
                 </h1>
-                <button
-                    onClick={clearAll}
-                    className="px-4 py-2 bg-accent-rose/10 border border-accent-rose/20 text-accent-rose rounded-xl hover:bg-accent-rose/20 text-sm font-medium transition-all"
-                >
-                    🗑️ Clear
-                </button>
+                {state.parsedWords.length > 0 && (
+                    <button
+                        onClick={handleClearAll}
+                        className="px-4 py-2 bg-accent-rose/10 border border-accent-rose/20 text-accent-rose rounded-xl hover:bg-accent-rose/20 text-sm font-medium transition-all"
+                    >
+                        🗑️ Clear
+                    </button>
+                )}
+            </div>
+
+            {/* Tab switcher */}
+            <div className="flex gap-2 p-1.5 bg-surface-800 rounded-2xl border border-white/[0.06] w-fit">
+                {TABS.map((tab) => (
+                    <button
+                        key={tab.id}
+                        id={`import-tab-${tab.id}`}
+                        onClick={() => aiImport.setActiveTab(tab.id)}
+                        className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+                            aiImport.state.activeTab === tab.id
+                                ? tab.id === 'topic'
+                                    ? 'bg-gradient-to-r from-accent-indigo to-accent-cyan text-white shadow-lg shadow-accent-indigo/20'
+                                    : 'bg-gradient-to-r from-accent-cyan to-accent-emerald text-white shadow-lg shadow-accent-cyan/20'
+                                : 'text-slate-400 hover:text-slate-300 hover:bg-white/[0.04]'
+                        }`}
+                    >
+                        {tab.label}
+                    </button>
+                ))}
             </div>
 
             {/* Main grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Left column - Input */}
-                <div className="space-y-4">
-                    <FormatGuide />
-                    <div>
-                        <label className="block text-sm font-bold text-slate-300 mb-2">
-                            📝 Dán từ vựng ở đây
-                        </label>
-                        <textarea
-                            value={state.rawText}
-                            onChange={handleTextChange}
-                            placeholder={`apple → quả táo\nhello → xin chào`}
-                            className="w-full h-64 px-4 py-3 glass-input font-mono text-sm resize-none"
+                {/* Left – Active tab input */}
+                <div>
+                    {aiImport.state.activeTab === 'topic' ? (
+                        <ImportTabAITopic
+                            topic={aiImport.state.topic}
+                            wordCount={aiImport.state.wordCount}
+                            wordCountRaw={aiImport.state.wordCountRaw}
+                            wordCountError={aiImport.state.wordCountError}
+                            isLoading={aiImport.state.isLoading}
+                            error={aiImport.state.error}
+                            onTopicChange={aiImport.handleTopicChange}
+                            onWordCountChange={aiImport.handleWordCountChange}
+                            onGenerate={aiImport.generateFromTopic}
+                            onCancel={aiImport.cancelGeneration}
                         />
-                    </div>
+                    ) : (
+                        <ImportTabAIImage
+                            imagePreview={aiImport.state.imagePreview}
+                            wordCount={aiImport.state.wordCount}
+                            wordCountRaw={aiImport.state.wordCountRaw}
+                            wordCountError={aiImport.state.wordCountError}
+                            isLoading={aiImport.state.isLoading}
+                            error={aiImport.state.error}
+                            onImageSelect={aiImport.handleImageSelect}
+                            onRemoveImage={aiImport.handleRemoveImage}
+                            onWordCountChange={aiImport.handleWordCountChange}
+                            onGenerate={aiImport.generateFromImage}
+                            onCancel={aiImport.cancelGeneration}
+                        />
+                    )}
                 </div>
 
-                {/* Right column - Preview */}
+                {/* Right – Result preview */}
                 <div className="space-y-4">
                     {state.parsedWords.length > 0 && (
                         <StatsCards
@@ -93,11 +154,8 @@ export const ImportVocabularyPage: React.FC = () => {
                         />
                     )}
 
-                    {state.parsedWords.length > 0 && (
-                        <JsonPreview
-                            jsonData={state.jsonData}
-                            onCopy={copyJson}
-                        />
+                    {state.parsedWords.length === 0 && (
+                        <EmptyResultState isLoading={aiImport.state.isLoading} />
                     )}
                 </div>
             </div>
@@ -106,34 +164,12 @@ export const ImportVocabularyPage: React.FC = () => {
             {state.parsedWords.length > 0 && (
                 <div className="flex gap-3 mt-6">
                     <button
+                        id="import-to-flashcard-btn"
                         onClick={handleOpenModal}
                         className="flex-1 py-4 bg-gradient-to-r from-accent-emerald to-accent-cyan text-white rounded-xl font-bold glow-btn text-lg"
                     >
                         ✅ Thêm {state.selectedCount} từ vào Flashcard
                     </button>
-                    <button
-                        onClick={copyJson}
-                        className="px-6 py-4 bg-white/[0.06] hover:bg-white/[0.1] text-slate-300 rounded-xl font-bold transition-all border border-white/[0.06]"
-                    >
-                        📋 Copy JSON
-                    </button>
-                </div>
-            )}
-
-            {/* Empty states */}
-            {state.parsedWords.length === 0 && state.rawText === '' && (
-                <div className="text-center py-16 text-slate-500">
-                    <div className="text-6xl mb-4">📙</div>
-                    <p className="text-lg">Dán hoặc gõ từ vựng để bắt đầu</p>
-                </div>
-            )}
-
-            {state.rawText && state.parsedWords.length === 0 && (
-                <div className="bg-accent-amber/10 border border-accent-amber/20 rounded-xl p-4 text-accent-amber">
-                    <p className="font-semibold">⚠️ Không tìm thấy từ nào</p>
-                    <p className="text-sm mt-1 text-accent-amber/80">
-                        Kiểm tra định dạng: word → meaning
-                    </p>
                 </div>
             )}
 
@@ -148,31 +184,7 @@ export const ImportVocabularyPage: React.FC = () => {
     );
 };
 
-/* ─── Sub-components ────────────────────────────────────── */
-
-const FormatGuide: React.FC = () => (
-    <div className="glass-card p-5 border border-accent-indigo/20 bg-gradient-to-br from-accent-indigo/5 to-transparent">
-        <h3 className="font-display font-bold text-accent-indigo-light mb-3">
-            📋 Hướng dẫn
-        </h3>
-        <div className="space-y-2 text-sm text-slate-300">
-            <p className="font-medium text-accent-emerald">✅ Định dạng hỗ trợ:</p>
-            <div className="bg-white/[0.03] rounded-xl p-3 font-mono text-xs border border-white/[0.04] space-y-1">
-                <div className="text-slate-500">word → meaning</div>
-                <div className="text-slate-500">word - meaning</div>
-                <div className="text-slate-500">word, meaning</div>
-                <div className="text-slate-500">- word: meaning</div>
-                <div className="text-slate-500">| word | meaning |</div>
-                <div className="text-slate-500">
-                    {`[{"word":"..","meaning":".."}]`}
-                </div>
-            </div>
-            <p className="text-accent-amber font-medium">
-                💡 Mỗi từ một dòng (trừ JSON)
-            </p>
-        </div>
-    </div>
-);
+/* ─── Sub-components ────────────────────────────────────────────────────────── */
 
 interface StatsCardsProps {
     total: number;
@@ -197,13 +209,32 @@ const StatsCards: React.FC<StatsCardsProps> = ({ total, selected }) => (
 );
 
 interface WordListProps {
-    words: { id: string; word: string; meaning: string; selected: boolean }[];
+    words: {
+        id: string;
+        word: string;
+        meaning: string;
+        pronunciation?: string;
+        partOfSpeech?: string;
+        example?: string;
+        selected: boolean;
+    }[];
     onToggle: (id: string) => void;
 }
 
+const PART_OF_SPEECH_COLOR: Record<string, string> = {
+    noun: 'text-accent-cyan',
+    verb: 'text-accent-emerald',
+    adjective: 'text-accent-indigo-light',
+    adverb: 'text-yellow-400',
+    preposition: 'text-orange-400',
+    pronoun: 'text-pink-400',
+    conjunction: 'text-purple-400',
+    interjection: 'text-red-400',
+};
+
 const WordList: React.FC<WordListProps> = ({ words, onToggle }) => (
     <div className="glass-card overflow-hidden">
-        <div className="max-h-64 overflow-y-auto">
+        <div className="max-h-[480px] overflow-y-auto">
             {words.map((item) => (
                 <div
                     key={item.id}
@@ -219,15 +250,43 @@ const WordList: React.FC<WordListProps> = ({ words, onToggle }) => (
                             type="checkbox"
                             checked={item.selected}
                             onChange={() => {}}
-                            className="mt-1 w-4 h-4 cursor-pointer"
+                            className="mt-1 w-4 h-4 cursor-pointer flex-shrink-0"
                         />
-                        <div className="flex-1 min-w-0">
-                            <p className="font-medium text-slate-200 text-sm">
-                                {item.word}
-                            </p>
-                            <p className="text-slate-400 text-xs">
+                        <div className="flex-1 min-w-0 space-y-0.5">
+                            {/* Word + phonetic + part-of-speech */}
+                            <div className="flex flex-wrap items-baseline gap-1.5">
+                                <span className="font-semibold text-slate-100 text-sm">
+                                    {item.word}
+                                </span>
+                                {item.pronunciation && (
+                                    <span className="text-accent-cyan text-xs font-mono">
+                                        {item.pronunciation}
+                                    </span>
+                                )}
+                                {item.partOfSpeech && (
+                                    <span
+                                        className={`text-xs italic ${
+                                            PART_OF_SPEECH_COLOR[
+                                                item.partOfSpeech.toLowerCase()
+                                            ] ?? 'text-slate-400'
+                                        }`}
+                                    >
+                                        {item.partOfSpeech}
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Meaning */}
+                            <p className="text-slate-300 text-xs">
                                 {item.meaning}
                             </p>
+
+                            {/* Example */}
+                            {item.example && (
+                                <p className="text-slate-500 text-xs italic border-l-2 border-accent-indigo/30 pl-2 mt-1">
+                                    {item.example}
+                                </p>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -236,26 +295,32 @@ const WordList: React.FC<WordListProps> = ({ words, onToggle }) => (
     </div>
 );
 
-interface JsonPreviewProps {
-    jsonData: string;
-    onCopy: () => void;
+
+
+interface EmptyResultStateProps {
+    isLoading: boolean;
 }
 
-const JsonPreview: React.FC<JsonPreviewProps> = ({ jsonData, onCopy }) => (
-    <div>
-        <div className="flex justify-between items-center mb-2">
-            <label className="text-sm font-bold text-slate-300">📄 JSON</label>
-            <button
-                onClick={onCopy}
-                className="text-xs px-3 py-1.5 bg-white/[0.06] text-slate-400 rounded-lg hover:bg-white/[0.1] transition-all border border-white/[0.06]"
-            >
-                📋 Copy
-            </button>
+const EmptyResultState: React.FC<EmptyResultStateProps> = ({ isLoading }) => {
+    if (isLoading) {
+        return (
+            <div className="text-center py-16 text-slate-500">
+                <div className="text-5xl mb-4 animate-pulse">🤖</div>
+                <p className="text-base text-slate-400">AI đang xử lý...</p>
+                <p className="text-sm mt-1">Kết quả sẽ hiện ở đây</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="text-center py-16 text-slate-500">
+            <div className="text-6xl mb-4">🤖</div>
+            <p className="text-lg text-slate-400">Kết quả sẽ hiện ở đây</p>
+            <p className="text-sm mt-1">
+                Chọn một tab và để AI tạo từ vựng cho bạn
+            </p>
         </div>
-        <pre className="bg-surface-800 text-accent-emerald p-4 rounded-xl text-xs overflow-auto max-h-32 border border-white/[0.06]">
-            {jsonData}
-        </pre>
-    </div>
-);
+    );
+};
 
 export default ImportVocabularyPage;

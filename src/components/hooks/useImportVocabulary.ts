@@ -6,35 +6,22 @@ export interface ParsedWord {
     id: string;
     word: string;
     meaning: string;
+    pronunciation?: string;
+    partOfSpeech?: string;
+    example?: string;
     selected: boolean;
 }
 
 export interface ImportVocabularyState {
     rawText: string;
     parsedWords: ParsedWord[];
-    jsonData: string;
     selectedCount: number;
 }
 
 const INITIAL_STATE: ImportVocabularyState = {
     rawText: '',
     parsedWords: [],
-    jsonData: '',
     selectedCount: 0,
-};
-
-const buildJsonData = (words: ParsedWord[]): string => {
-    const selected = words.filter((w) => w.selected);
-    return JSON.stringify(
-        selected.map((p) => ({
-            word: p.word,
-            meaning: p.meaning,
-            pronunciation: '',
-            example: '',
-        })),
-        null,
-        2,
-    );
 };
 
 const parseTextInput = (text: string): ParsedWord[] => {
@@ -133,6 +120,7 @@ const parseJsonInput = (text: string): ParsedWord[] => {
 export function useImportVocabulary() {
     const [state, setState] = useState<ImportVocabularyState>(INITIAL_STATE);
 
+
     const handleTextChange = useCallback(
         (e: React.ChangeEvent<HTMLTextAreaElement>) => {
             const text = e.target.value;
@@ -145,12 +133,35 @@ export function useImportVocabulary() {
                 parsed = parseTextInput(text);
             }
 
-            const jsonData = buildJsonData(parsed);
-
             setState({
                 rawText: text,
                 parsedWords: parsed,
-                jsonData,
+                selectedCount: parsed.length,
+            });
+        },
+        [],
+    );
+
+    /**
+     * Populate parsed words from AI result (Topic or Image tab).
+     * Accepts items with all flashcard fields.
+     */
+    const setWordsFromAI = useCallback(
+        (
+            items: { word: string; meaning: string; pronunciation?: string; partOfSpeech?: string; example?: string }[],
+        ) => {
+            const parsed: ParsedWord[] = items.map((item, idx) => ({
+                id: `ai-word-${idx}-${Date.now()}`,
+                word: item.word.trim(),
+                meaning: item.meaning.trim(),
+                pronunciation: item.pronunciation?.trim(),
+                partOfSpeech: item.partOfSpeech?.trim(),
+                example: item.example?.trim(),
+                selected: true,
+            }));
+            setState({
+                rawText: '',
+                parsedWords: parsed,
                 selectedCount: parsed.length,
             });
         },
@@ -163,8 +174,7 @@ export function useImportVocabulary() {
                 w.id === id ? { ...w, selected: !w.selected } : w,
             );
             const count = updated.filter((w) => w.selected).length;
-            const jsonData = buildJsonData(updated);
-            return { ...prev, parsedWords: updated, jsonData, selectedCount: count };
+            return { ...prev, parsedWords: updated, selectedCount: count };
         });
     }, []);
 
@@ -176,15 +186,9 @@ export function useImportVocabulary() {
                 selected: !allSelected,
             }));
             const count = updated.filter((w) => w.selected).length;
-            const jsonData = buildJsonData(updated);
-            return { ...prev, parsedWords: updated, jsonData, selectedCount: count };
+            return { ...prev, parsedWords: updated, selectedCount: count };
         });
     }, []);
-
-    const copyJson = useCallback(() => {
-        navigator.clipboard.writeText(state.jsonData);
-        alert('✅ JSON copied to clipboard!');
-    }, [state.jsonData]);
 
     const clearAll = useCallback(() => {
         setState(INITIAL_STATE);
@@ -196,8 +200,9 @@ export function useImportVocabulary() {
             .map((w) => ({
                 word: w.word,
                 meaning: w.meaning,
-                pronunciation: '',
-                example: '',
+                pronunciation: w.pronunciation || '',
+                partOfSpeech: w.partOfSpeech || '',
+                example: w.example || '',
             }));
     }, [state.parsedWords]);
 
@@ -209,9 +214,9 @@ export function useImportVocabulary() {
         state,
         allSelected,
         handleTextChange,
+        setWordsFromAI,
         toggleWordSelection,
         toggleSelectAll,
-        copyJson,
         clearAll,
         getSelectedCards,
     };
