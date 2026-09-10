@@ -20,14 +20,14 @@ export const getUserFromToken = (token: string): User | null => {
     try {
         const decoded = jwtDecode<JwtPayload>(token);
         
-        // Map JWT payload fields to User interface
-        // Depending on your backend implementation, 'sub' or 'email' might be used for the unique identifier
-        // and 'name' or 'fullName' for the display name.
+        // Map role từ JWT (ADMIN/USER/TEACHER) → lowercase để khớp User type ('admin'|'user'|'teacher')
+        const rawRole = (decoded.role || 'user').toLowerCase() as 'user' | 'admin' | 'teacher';
+        
         return {
             id: decoded.id || decoded.sub || '',
             email: decoded.email || decoded.sub || '',
             name: decoded.name || 'User',
-            role: (decoded.role as any) || 'user',
+            role: rawRole,
         };
     } catch (error) {
         console.error('Failed to decode JWT token:', error);

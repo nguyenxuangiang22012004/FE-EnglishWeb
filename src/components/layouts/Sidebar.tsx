@@ -6,13 +6,16 @@ import { usePathname } from 'next/navigation';
 import {
     Home, Headphones, Mic, MessageCircle, BookOpen,
     Star, List as ListIcon, Library, Trophy, BarChart2,
-    Crown, ArrowRight, X, PlayCircle, GraduationCap
+    Crown, ArrowRight, X, PlayCircle, GraduationCap, ShieldCheck
 } from 'lucide-react';
 import { AvatarDropdown } from './AvatarDropdown';
+import { useAppSelector } from '@/store';
 
 export const Sidebar: React.FC = () => {
     const pathname = usePathname();
     const isActive = (path: string) => path !== '#' && (pathname === path || pathname.startsWith(`${path}/`));
+    const user = useAppSelector((state) => state.auth.user);
+    const isAdmin = user?.role === 'admin';
 
     const sections = [
         {
@@ -120,6 +123,17 @@ export const Sidebar: React.FC = () => {
                     <span className="text-[14px] font-medium text-yellow-500 group-hover:text-yellow-400">Nâng cấp Premium</span>
                     <ArrowRight size={16} className="text-yellow-500" />
                 </button>
+
+                {/* Admin Panel link — chỉ hiện với tài khoản ADMIN */}
+                {isAdmin && (
+                    <Link
+                        href="/admin"
+                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-[14px] border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 transition-colors group"
+                    >
+                        <ShieldCheck size={16} className="text-red-400" />
+                        <span className="text-[14px] font-medium text-red-400 group-hover:text-red-300">Quản trị hệ thống</span>
+                    </Link>
+                )}
 
                 <AvatarDropdown />
             </div>

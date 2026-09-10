@@ -100,7 +100,7 @@ const InputArea: React.FC<{
   onHint: () => void;
   showHint: boolean;
   answerState: string;
-  inputRef: React.RefObject<HTMLInputElement | null>;
+  inputRef: React.RefObject<HTMLInputElement>;
 }> = ({ value, onChange, onKeyDown, onSubmit, onSkip, onHint, showHint, answerState, inputRef }) => (
   <div className="space-y-3">
     <label className="block text-sm font-semibold text-slate-400">

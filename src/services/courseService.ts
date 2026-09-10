@@ -35,13 +35,39 @@ export interface Topic {
   introMessage: string;
 }
 
+export type LessonType = 'VOCABULARY' | 'FILL_BLANK' | 'SITUATION' | 'SHADOWING' | 'CONVERSATION';
+
 export interface Lesson {
   id: string;
   topicId: string;
   title: string;
-  type: 'VOCABULARY' | 'FILL_BLANK' | 'SITUATION' | 'SHADOWING' | 'CONVERSATION';
+  type: LessonType;
   orderIndex: number;
   contentJson: string | any;
+}
+
+// ─── Payloads for Admin CRUD ─────────────────────────────────────────────────
+
+export interface CreateCoursePayload {
+  name: string;
+  description?: string;
+  level?: string;
+  imageUrl?: string;
+}
+
+export interface CreateTopicPayload {
+  name: string;
+  description?: string;
+  orderIndex?: number;
+  mascotImageUrl?: string;
+  introMessage?: string;
+}
+
+export interface CreateLessonPayload {
+  title: string;
+  type: LessonType;
+  orderIndex?: number;
+  contentJson?: string;
 }
 
 // ─── Progress Interfaces ─────────────────────────────────────────────────────
@@ -93,19 +119,85 @@ export const courseService = {
     return res.data?.data || res.data;
   },
 
+  getCourseDetail: async (courseId: string): Promise<Course> => {
+    const res = await axios.get(`/courses/${courseId}`);
+    return res.data?.data || res.data;
+  },
+
+  createCourse: async (data: CreateCoursePayload): Promise<Course> => {
+    const res = await axios.post('/courses', data);
+    return res.data?.data || res.data;
+  },
+
+  updateCourse: async (courseId: string, data: CreateCoursePayload): Promise<Course> => {
+    const res = await axios.put(`/courses/${courseId}`, data);
+    return res.data?.data || res.data;
+  },
+
+  deleteCourse: async (courseId: string): Promise<void> => {
+    await axios.delete(`/courses/${courseId}`);
+  },
+
+  // ─── Topics ─────────────────────────────────────────────────────────────────
+
+  getAllTopics: async (): Promise<Topic[]> => {
+    const res = await axios.get('/courses/topics');
+    return res.data?.data || res.data;
+  },
+
+  getTopicById: async (topicId: string): Promise<Topic> => {
+    const res = await axios.get(`/courses/topics/${topicId}`);
+    return res.data?.data || res.data;
+  },
+
   getTopicsByCourse: async (courseId: string): Promise<Topic[]> => {
     const res = await axios.get(`/courses/${courseId}/topics`);
     return res.data?.data || res.data;
   },
 
-  getCourseDetail: async (courseId: string): Promise<Course> => {
-    const res = await axios.get(`/courses/${courseId}`);
+  createTopic: async (courseId: string, data: CreateTopicPayload): Promise<Topic> => {
+    const res = await axios.post(`/courses/${courseId}/topics`, data);
+    return res.data?.data || res.data;
+  },
+
+  updateTopic: async (topicId: string, data: CreateTopicPayload): Promise<Topic> => {
+    const res = await axios.put(`/courses/topics/${topicId}`, data);
+    return res.data?.data || res.data;
+  },
+
+  deleteTopic: async (topicId: string): Promise<void> => {
+    await axios.delete(`/courses/topics/${topicId}`);
+  },
+
+  // ─── Lessons ────────────────────────────────────────────────────────────────
+
+  getAllLessons: async (): Promise<Lesson[]> => {
+    const res = await axios.get('/courses/lessons');
+    return res.data?.data || res.data;
+  },
+
+  getLessonById: async (lessonId: string): Promise<Lesson> => {
+    const res = await axios.get(`/courses/lessons/${lessonId}`);
     return res.data?.data || res.data;
   },
 
   getLessonsByTopic: async (topicId: string): Promise<Lesson[]> => {
     const res = await axios.get(`/courses/topics/${topicId}/lessons`);
     return res.data?.data || res.data;
+  },
+
+  createLesson: async (topicId: string, data: CreateLessonPayload): Promise<Lesson> => {
+    const res = await axios.post(`/courses/topics/${topicId}/lessons`, data);
+    return res.data?.data || res.data;
+  },
+
+  updateLesson: async (lessonId: string, data: CreateLessonPayload): Promise<Lesson> => {
+    const res = await axios.put(`/courses/lessons/${lessonId}`, data);
+    return res.data?.data || res.data;
+  },
+
+  deleteLesson: async (lessonId: string): Promise<void> => {
+    await axios.delete(`/courses/lessons/${lessonId}`);
   },
 
   // ─── Progress APIs ──────────────────────────────────────────────────────────
@@ -153,4 +245,3 @@ export const courseService = {
     return res.data?.data || res.data;
   },
 };
-
