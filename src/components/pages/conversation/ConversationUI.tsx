@@ -7,6 +7,29 @@ import { speakText, startListening } from '@/utils/speech';
 import { useRouter } from 'next/navigation';
 import { conversationService, Conversation, ConversationMessage } from '@/services/conversationService';
 
+// Matches ```json ... ``` blocks (both single-line and multi-line)
+const JSON_BLOCK_REGEX = /```(?:json)?\s*([\s\S]*?)\s*```/i;
+
+function extractJsonBlock(text: string): { jsonStr: string; cleanText: string } | null {
+    const match = text.match(JSON_BLOCK_REGEX);
+    if (!match) return null;
+    const jsonStr = match[1].trim();
+    const cleanText = text.replace(match[0], '').trim();
+    return { jsonStr, cleanText };
+}
+
+function safeParseVocab(jsonStr: string): Array<{ word: string; meaning: string }> | null {
+    try {
+        const parsed = JSON.parse(jsonStr);
+        if (Array.isArray(parsed?.vocabulary)) {
+            return parsed.vocabulary;
+        }
+    } catch {
+        // ignore
+    }
+    return null;
+}
+
 type VocabItem = {
     word: string;
     meaning: string;
@@ -121,26 +144,17 @@ export default function ConversationUI() {
             const result = await chatSession.current.sendMessage("Hello! Let's start.");
             const responseText = result.response.text();
 
-            // Extract vocabulary JSON from response
-            const jsonRegex = /```(?:json)?\s*(\{[\s\S]*?\})\s*```/i;
-            const match = responseText.match(jsonRegex) || responseText.match(/(\{[\s\S]*"vocabulary"[\s\S]*\})/);
+            // Extract vocabulary JSON from first AI response
+            const extracted = extractJsonBlock(responseText);
             let speechText = responseText;
-            let vocabJsonStr = '';
 
-            if (match && match[1]) {
-                try {
-                    vocabJsonStr = match[1];
-                    const parsed = JSON.parse(match[1]);
-                    if (parsed.vocabulary) {
-                        setVocabulary(parsed.vocabulary);
-                        // Save initial vocabulary to backend
-                        conversationService.updateVocabulary(conv.id, match[1]).catch(console.error);
-                    }
-                    // Remove JSON block from speech text
-                    speechText = responseText.replace(match[0], '').trim();
-                } catch (e) {
-                    console.error('Failed to parse vocab JSON', e);
+            if (extracted) {
+                const vocab = safeParseVocab(extracted.jsonStr);
+                if (vocab) {
+                    setVocabulary(vocab);
+                    conversationService.updateVocabulary(conv.id, extracted.jsonStr).catch(console.error);
                 }
+                speechText = extracted.cleanText;
             }
 
             const aiMsg = await conversationService.addMessage(conv.id, 'model', speechText);
@@ -174,11 +188,10 @@ export default function ConversationUI() {
             const result = await chatSession.current.sendMessage(text.trim());
             let aiText = result.response.text();
 
-            // Filter out JSON block if AI accidentally includes it
-            const jsonRegex = /```(?:json)?\s*(\{[\s\S]*?\})\s*```/i;
-            const match = aiText.match(jsonRegex) || aiText.match(/(\{[\s\S]*"vocabulary"[\s\S]*\})/);
-            if (match) {
-                aiText = aiText.replace(match[0], '').trim();
+            // Filter out JSON block if AI accidentally includes it in subsequent responses
+            const accidental = extractJsonBlock(aiText);
+            if (accidental) {
+                aiText = accidental.cleanText;
             }
 
             const aiMsg = await conversationService.addMessage(activeConversationId, 'model', aiText);
@@ -205,24 +218,36 @@ export default function ConversationUI() {
             const genAI = new GoogleGenerativeAI(storedKey);
             const model = genAI.getGenerativeModel({ model: storedModel });
 
-            const prompt = `Evaluate this English sentence provided by an English learner: "${userText}". 
-Give a short feedback in Vietnamese (explain any grammar or vocabulary mistakes if any, or just say it's good), and provide a better or more natural way to say it in English.
-Return ONLY JSON format exactly like this, no markdown formatting:
+            const prompt = `You are an English teacher evaluating a student's sentence.
+Student sentence: "${userText}"
+
+You MUST respond with ONLY a valid JSON code block. No other text before or after.
+The JSON must follow this EXACT schema:
 \`\`\`json
-{"feedback": "nhận xét bằng tiếng Việt", "suggested_answer": "better English sentence"}
+{"feedback": "<nhận xét ngắn bằng tiếng Việt về lỗi ngữ pháp hoặc từ vựng, hoặc khen nếu đúng>", "suggested_answer": "<một câu tiếng Anh tự nhiên hơn hoặc đúng hơn>"}
 \`\`\`
-`;
+
+EXAMPLE of a valid response:
+\`\`\`json
+{"feedback": "Câu này đúng ngữ pháp nhưng có thể tự nhiên hơn.", "suggested_answer": "I would like to order a coffee, please."}
+\`\`\`
+
+Do NOT output anything outside the json code block.`;
             const result = await model.generateContent(prompt);
             const responseText = result.response.text();
-            const jsonRegex = /```json\n([\s\S]*?)\n```/;
-            const match = responseText.match(jsonRegex) || responseText.match(/{[\s\S]*}/);
+            const extracted = extractJsonBlock(responseText);
 
-            if (match) {
-                const jsonStr = match[1] || match[0];
-                const parsed = JSON.parse(jsonStr);
-                if (parsed.feedback || parsed.suggested_answer) {
-                    await conversationService.updateMessageFeedback(convId, msgId, parsed.feedback || '', parsed.suggested_answer || '');
-                    setMessages(prev => prev.map(m => m.id === msgId ? { ...m, feedback: parsed.feedback, suggestedAnswer: parsed.suggested_answer } : m));
+            if (extracted) {
+                try {
+                    const parsed = JSON.parse(extracted.jsonStr);
+                    if (parsed.feedback || parsed.suggested_answer) {
+                        await conversationService.updateMessageFeedback(convId, msgId, parsed.feedback || '', parsed.suggested_answer || '');
+                        setMessages(prev => prev.map(m =>
+                            m.id === msgId ? { ...m, feedback: parsed.feedback, suggestedAnswer: parsed.suggested_answer } : m
+                        ));
+                    }
+                } catch (e) {
+                    console.error('Failed to parse feedback JSON', e);
                 }
             }
         } catch (e) {
@@ -241,24 +266,31 @@ Return ONLY JSON format exactly like this, no markdown formatting:
             const genAI = new GoogleGenerativeAI(storedKey);
             const model = genAI.getGenerativeModel({ model: storedModel });
 
-            const prompt = `Based on the conversation history about "${convTopic}", suggest 3 useful English vocabulary words or phrases that the user could use to reply to the AI's latest message.
+            const prompt = `You are an English teacher suggesting vocabulary to a learner.
+Conversation topic: "${convTopic}"
 AI's latest message: "${lastAiMsg}"
-Return ONLY JSON format exactly like this, no markdown formatting:
+
+You MUST respond with ONLY a valid JSON code block. No other text before or after.
+The JSON must follow this EXACT schema with exactly 3 vocabulary items:
 \`\`\`json
-{"vocabulary": [{"word": "word", "meaning": "vietnamese meaning"}]}
+{"vocabulary": [{"word": "<English word or phrase>", "meaning": "<Vietnamese meaning>"}, {"word": "<English word or phrase>", "meaning": "<Vietnamese meaning>"}, {"word": "<English word or phrase>", "meaning": "<Vietnamese meaning>"}]}
 \`\`\`
-`;
+
+EXAMPLE of a valid response:
+\`\`\`json
+{"vocabulary": [{"word": "I agree", "meaning": "Tôi đồng ý"}, {"word": "in my opinion", "meaning": "theo ý kiến của tôi"}, {"word": "to be honest", "meaning": "thật ra mà nói"}]}
+\`\`\`
+
+Do NOT output anything outside the json code block.`;
             const result = await model.generateContent(prompt);
             const responseText = result.response.text();
-            const jsonRegex = /```json\n([\s\S]*?)\n```/;
-            const match = responseText.match(jsonRegex) || responseText.match(/{[\s\S]*}/);
+            const extracted = extractJsonBlock(responseText);
 
-            if (match) {
-                const jsonStr = match[1] || match[0];
-                const parsed = JSON.parse(jsonStr);
-                if (parsed.vocabulary) {
-                    setVocabulary(parsed.vocabulary);
-                    conversationService.updateVocabulary(convId, jsonStr).catch(console.error);
+            if (extracted) {
+                const vocab = safeParseVocab(extracted.jsonStr);
+                if (vocab) {
+                    setVocabulary(vocab);
+                    conversationService.updateVocabulary(convId, extracted.jsonStr).catch(console.error);
                 }
             }
         } catch (e) {

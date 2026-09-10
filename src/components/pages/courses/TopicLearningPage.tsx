@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { MascotDialog } from '@/components/ui/courses/MascotDialog';
 import { VocabularyCard } from '@/components/ui/courses/VocabularyCard';
 import { VoiceRecorder } from '@/components/ui/courses/VoiceRecorder';
+import { RecordingPlayback } from '@/components/ui/courses/RecordingPlayback';
 import { ChatBubble } from '@/components/ui/courses/ChatBubble';
-import { ScoreResult } from '@/components/ui/courses/ScoreResult';
 import { FillBlankCard } from '@/components/ui/courses/FillBlankCard';
 import { Volume2, Loader2, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
@@ -15,6 +15,11 @@ import {
   TopicFinalScore,
 } from '@/services/courseService';
 import { useRouter } from 'next/navigation';
+
+interface Recording {
+  url: string;
+  index: number;
+}
 
 interface TopicLearningPageProps {
   courseId: string;
@@ -29,13 +34,13 @@ export const TopicLearningPage: React.FC<TopicLearningPageProps> = ({ courseId, 
   const [courseProgress, setCourseProgress] = useState<CourseProgress | null>(null);
 
   const [step, setStep] = useState(0);
-  const [scores, setScores] = useState<(number | null)[]>([]); 
-  const [score, setScore] = useState<number | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [aiFeedback, setAiFeedback] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [completedSaved, setCompletedSaved] = useState(false);
   const [finalScoreData, setFinalScoreData] = useState<TopicFinalScore | null>(null);
+
+  // Trạng thái ghi âm: lưu theo lessonId để mỗi từ/lesson có danh sách riêng
+  const [recordingsMap, setRecordingsMap] = useState<Record<string, Recording[]>>({});
+  const [showingPlaybackSet, setShowingPlaybackSet] = useState<Record<string, boolean>>({});
 
   const getTopicProgress = useCallback(
     (): TopicProgress | undefined =>
@@ -108,13 +113,8 @@ export const TopicLearningPage: React.FC<TopicLearningPageProps> = ({ courseId, 
       setIsSaving(true);
 
       try {
-        if (lessonScore !== undefined && lessonScore !== null) {
-          setScores((prev) => {
-            const next = [...prev];
-            next[currentStep - 1] = lessonScore;
-            return next;
-          });
-        }
+        // lessonScore không còn được dùng cho điểm số hiển thị,
+        // nhưng vẫn giữ API call để tương thích backend
 
         const nextLessonId = lessons[nextStep - 1]?.id ?? null;
 
@@ -152,7 +152,7 @@ export const TopicLearningPage: React.FC<TopicLearningPageProps> = ({ courseId, 
         console.error('Failed to save progress', err);
       } finally {
         setIsSaving(false);
-        setScore(null);
+        // KHÔNG reset recordings của các bước khác — chỉ chuyển step
         setStep(nextStep);
       }
     },
@@ -200,9 +200,9 @@ export const TopicLearningPage: React.FC<TopicLearningPageProps> = ({ courseId, 
           ),
         };
       });
-      setScores([]);
+      setRecordingsMap({});
+      setShowingPlaybackSet({});
       setFinalScoreData(null);
-      setScore(null);
       setStep(0);
       setCompletedSaved(false);
     } catch (err) {
@@ -212,19 +212,29 @@ export const TopicLearningPage: React.FC<TopicLearningPageProps> = ({ courseId, 
     }
   };
 
-  const handleRecordingComplete = async (text: string) => {
-    setIsProcessing(true);
-    try {
-      setTimeout(() => {
-        const randomScore = Math.floor(Math.random() * 40) + 60;
-        setScore(randomScore);
-        setAiFeedback(`Bạn đã nói "${text}". AI đánh giá bạn phát âm và ngữ điệu khá tốt!`);
-        setIsProcessing(false);
-      }, 1500);
-    } catch (error) {
-      console.error(error);
-      setIsProcessing(false);
-    }
+
+  /** Thêm bản ghi mới vào danh sách của lesson hiện tại */
+  const handleRecordingComplete = (audioBlob: Blob, audioUrl: string) => {
+    const key = `step-${step}`;
+    setRecordingsMap((prev) => {
+      const existing = prev[key] ?? [];
+      return { ...prev, [key]: [...existing, { url: audioUrl, index: existing.length + 1 }] };
+    });
+    setShowingPlaybackSet((prev) => ({ ...prev, [key]: true }));
+  };
+
+  /** Ghi thêm: ẩn playback của lesson hiện tại, giữ nguyên danh sách */
+  const handleRetryRecording = () => {
+    const key = `step-${step}`;
+    setShowingPlaybackSet((prev) => ({ ...prev, [key]: false }));
+  };
+
+  /** Tiếp theo: xoá recordings của lesson này rồi chuyển bước */
+  const handleNextAfterRecording = (currentStep: number, lesson: Lesson | null) => {
+    const key = `step-${currentStep}`;
+    setRecordingsMap((prev) => { const next = { ...prev }; delete next[key]; return next; });
+    setShowingPlaybackSet((prev) => { const next = { ...prev }; delete next[key]; return next; });
+    handleNextStep(currentStep, lesson, null);
   };
 
   const playAudio = (text: string) => {
@@ -265,6 +275,11 @@ export const TopicLearningPage: React.FC<TopicLearningPageProps> = ({ courseId, 
       ? JSON.parse(currentLesson.contentJson)
       : currentLesson.contentJson
     : {};
+
+  // Derived: recordings và playback state của lesson hiện tại
+  const recordingKey = `step-${step}`;
+  const recordings = recordingsMap[recordingKey] ?? [];
+  const isShowingPlayback = showingPlaybackSet[recordingKey] ?? false;
 
   return (
     <div className="w-full flex flex-col items-center justify-center py-4">
@@ -331,18 +346,22 @@ export const TopicLearningPage: React.FC<TopicLearningPageProps> = ({ courseId, 
                 meaning={content.meaning}
                 example={content.example}
               />
-              {score === null ? (
-                <div className="mt-4 flex flex-col items-center gap-4">
-                  <p className="text-slate-400">Hãy nhấn vào mic và đọc to từ trên</p>
-                  <VoiceRecorder onRecordingComplete={handleRecordingComplete} isProcessing={isProcessing} />
-                </div>
-              ) : (
-                <ScoreResult
-                  score={score}
-                  feedback={aiFeedback}
-                  onRetry={() => setScore(null)}
-                  onNext={() => handleNextStep(step, currentLesson, score)}
+              {isShowingPlayback && recordings.length > 0 ? (
+                <RecordingPlayback
+                  audioUrl={recordings[recordings.length - 1].url}
+                  recordings={recordings}
+                  onRetry={handleRetryRecording}
+                  onNext={() => handleNextAfterRecording(step, currentLesson)}
                 />
+              ) : (
+                <div className="mt-4 flex flex-col items-center gap-4">
+                  <p className="text-slate-400">
+                    {recordings.length === 0
+                      ? 'Hãy nhấn vào mic và đọc to từ trên'
+                      : `Đã ghi ${recordings.length} lần — nhấn để ghi thêm`}
+                  </p>
+                  <VoiceRecorder onRecordingComplete={handleRecordingComplete} />
+                </div>
               )}
             </div>
           )}
@@ -372,15 +391,22 @@ export const TopicLearningPage: React.FC<TopicLearningPageProps> = ({ courseId, 
                 </button>
                 <p className="text-sm text-slate-400">Nghe và cố gắng lặp lại chính xác ngữ điệu</p>
               </div>
-              {score === null ? (
-                <VoiceRecorder onRecordingComplete={handleRecordingComplete} isProcessing={isProcessing} />
-              ) : (
-                <ScoreResult
-                  score={score}
-                  feedback={aiFeedback}
-                  onRetry={() => setScore(null)}
-                  onNext={() => handleNextStep(step, currentLesson, score)}
+              {isShowingPlayback && recordings.length > 0 ? (
+                <RecordingPlayback
+                  audioUrl={recordings[recordings.length - 1].url}
+                  recordings={recordings}
+                  onRetry={handleRetryRecording}
+                  onNext={() => handleNextAfterRecording(step, currentLesson)}
                 />
+              ) : (
+                <div className="flex flex-col items-center gap-3">
+                  {recordings.length > 0 && (
+                    <p className="text-sm text-slate-400">
+                      Đã ghi {recordings.length} lần — nhấn để ghi thêm
+                    </p>
+                  )}
+                  <VoiceRecorder onRecordingComplete={handleRecordingComplete} />
+                </div>
               )}
             </div>
           )}
@@ -391,15 +417,22 @@ export const TopicLearningPage: React.FC<TopicLearningPageProps> = ({ courseId, 
               <div className="bg-blue-500/10 text-blue-200 p-6 rounded-2xl w-full border border-blue-500/20">
                 <p className="text-lg">Tình huống: {content.situation}</p>
               </div>
-              {score === null ? (
-                <VoiceRecorder onRecordingComplete={handleRecordingComplete} isProcessing={isProcessing} />
-              ) : (
-                <ScoreResult
-                  score={score}
-                  feedback={aiFeedback}
-                  onRetry={() => setScore(null)}
-                  onNext={() => handleNextStep(step, currentLesson, score)}
+              {isShowingPlayback && recordings.length > 0 ? (
+                <RecordingPlayback
+                  audioUrl={recordings[recordings.length - 1].url}
+                  recordings={recordings}
+                  onRetry={handleRetryRecording}
+                  onNext={() => handleNextAfterRecording(step, currentLesson)}
                 />
+              ) : (
+                <div className="flex flex-col items-center gap-3">
+                  {recordings.length > 0 && (
+                    <p className="text-sm text-slate-400">
+                      Đã ghi {recordings.length} lần — nhấn để ghi thêm
+                    </p>
+                  )}
+                  <VoiceRecorder onRecordingComplete={handleRecordingComplete} />
+                </div>
               )}
             </div>
           )}
@@ -412,7 +445,7 @@ export const TopicLearningPage: React.FC<TopicLearningPageProps> = ({ courseId, 
                   <ChatBubble key={i} message={msg.text} isAI={msg.isAI} />
                 ))}
               </div>
-              <VoiceRecorder onRecordingComplete={() => handleNextStep(step, currentLesson, null)} />
+              <VoiceRecorder onRecordingComplete={(_blob, _url) => handleNextStep(step, currentLesson, null)} />
             </div>
           )}
 
