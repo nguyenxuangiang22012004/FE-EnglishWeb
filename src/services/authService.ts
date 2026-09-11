@@ -24,6 +24,15 @@ export const authService = {
     return response.data;
   },
 
+  loginWithGoogle: async (idToken: string): Promise<AuthResponse> => {
+    const response = await axios.post('/auth/google', { idToken });
+    // Lưu token vào cookie như login thông thường
+    if (response.data?.data?.accessToken) {
+      saveTokenToCookie('token', response.data.data.accessToken);
+    }
+    return response.data;
+  },
+
   register: async (payload: RegisterPayload): Promise<AuthResponse> => {
     const response = await axios.post('/auth/register', payload);
     return response.data;

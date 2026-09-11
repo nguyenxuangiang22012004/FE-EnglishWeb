@@ -8,6 +8,7 @@ import authService from '@/services/authService';
 import { setToken, setUser } from '@/store/slices/authSlice';
 import { getUserFromToken } from '@/utils/auth';
 import axios from 'axios';
+import { GoogleLogin } from '@react-oauth/google';
 
 interface LoginFormData {
     email: string;
@@ -22,6 +23,7 @@ export const LoginForm: React.FC = () => {
         rememberMe: false,
     });
     const [loading, setLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
     const [error, setError] = useState('');
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -34,6 +36,31 @@ export const LoginForm: React.FC = () => {
             if (typeof data?.error === 'string') return data.error;
         }
         return 'Lỗi đăng nhập. Vui lòng thử lại.';
+    };
+
+    const handleGoogleSuccess = async (credential: string) => {
+        setGoogleLoading(true);
+        setError('');
+        try {
+            const response = await authService.loginWithGoogle(credential);
+            if (response.success && response.data.accessToken) {
+                const token = response.data.accessToken;
+                localStorage.setItem('token', token);
+                if (response.data.refreshToken) {
+                    localStorage.setItem('refreshToken', response.data.refreshToken);
+                }
+                dispatch(setToken(token));
+                const userFromToken = getUserFromToken(token);
+                const user = response.data.user || userFromToken;
+                if (user) dispatch(setUser(user));
+                const redirectTo = searchParams.get('redirect') || '/dashboard';
+                router.push(redirectTo);
+            }
+        } catch (err) {
+            setError(getLoginErrorMessage(err));
+        } finally {
+            setGoogleLoading(false);
+        }
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -186,14 +213,46 @@ export const LoginForm: React.FC = () => {
                         <div className="w-full border-t border-white/[0.06]"></div>
                     </div>
                     <div className="relative flex justify-center text-sm">
-                        <span className="px-3 bg-surface-800/80 text-slate-500 text-xs">Chưa có tài khoản?</span>
+                        <span className="px-3 bg-surface-800/80 text-slate-500 text-xs">hoặc tiếp tục với</span>
                     </div>
+                </div>
+
+                {/* Google Login Button - dùng GoogleLogin component để nhận ID Token */}
+                <div
+                    className={`w-full transition-opacity duration-200 ${
+                        googleLoading || loading ? 'opacity-50 pointer-events-none' : ''
+                    }`}
+                >
+                    {googleLoading ? (
+                        <div className="w-full py-3 flex items-center justify-center gap-3 bg-white/5 border border-white/10 rounded-xl text-slate-200 text-sm">
+                            <span className="w-5 h-5 border-2 border-slate-400/30 border-t-slate-300 rounded-full animate-spin" />
+                            <span>Đang xử lý...</span>
+                        </div>
+                    ) : (
+                        <GoogleLogin
+                            onSuccess={(credentialResponse) => {
+                                if (credentialResponse.credential) {
+                                    handleGoogleSuccess(credentialResponse.credential);
+                                } else {
+                                    setError('Không nhận được thông tin từ Google.');
+                                }
+                            }}
+                            onError={() => {
+                                setError('Đăng nhập Google thất bại. Vui lòng thử lại.');
+                            }}
+                            theme="filled_black"
+                            size="large"
+                            text="signin_with"
+                            width="400"
+                            shape="rectangular"
+                        />
+                    )}
                 </div>
 
                 {/* Sign Up Link */}
                 <Link
                     href="/auth/signup"
-                    className="block text-center py-3 border border-accent-indigo/30 text-accent-indigo-light rounded-xl font-bold hover:bg-accent-indigo/5 transition-all text-sm"
+                    className="block text-center py-3 border border-accent-indigo/30 text-accent-indigo-light rounded-xl font-bold hover:bg-accent-indigo/5 transition-all text-sm mt-3"
                 >
                     📝 Tạo Tài Khoản Mới
                 </Link>

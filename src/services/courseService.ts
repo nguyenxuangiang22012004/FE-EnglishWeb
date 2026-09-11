@@ -2,18 +2,12 @@ import axios from '@/config/axios';
 
 export interface PaginatedResponse<T> {
   content: T[];
-  pageable: {
-    pageNumber: number;
-    pageSize: number;
-  };
-  totalElements: number;
-  totalPages: number;
-  last: boolean;
+  total: number;
+  page: number;
   size: number;
-  number: number;
-  first: boolean;
-  numberOfElements: number;
-  empty: boolean;
+  totalPages: number;
+  // tương thích ngược nếu cần
+  totalElements?: number;
 }
 
 export interface Course {
@@ -112,9 +106,9 @@ export interface TopicFinalScore {
 // ─── Service ─────────────────────────────────────────────────────────────────
 
 export const courseService = {
-  getCourses: async (page: number = 0, size: number = 10, search: string = ''): Promise<PaginatedResponse<Course>> => {
+  getCourses: async (page: number = 0, size: number = 10, search: string = '', limit?: number): Promise<PaginatedResponse<Course>> => {
     const res = await axios.get('/courses', {
-      params: { page, size, search }
+      params: { page, size, limit, search }
     });
     return res.data?.data || res.data;
   },

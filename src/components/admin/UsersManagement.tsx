@@ -97,7 +97,7 @@ export const UsersManagement: React.FC = () => {
     try {
       const data = await adminService.getUsers({ search: search || undefined, page, size: PAGE_SIZE });
       setUsers(data.content);
-      setTotal(data.totalElements);
+      setTotal(data.total ?? data.totalElements ?? 0);
       setTotalPages(data.totalPages);
     } catch {
       // ignore

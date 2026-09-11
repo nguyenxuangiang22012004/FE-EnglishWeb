@@ -29,13 +29,12 @@ export interface AdminUserDTO {
   updatedAt: string;
 }
 
-/** Spring Data Page response format */
+/** Format phân trang tinh gọn */
 export interface PageResponse<T> {
   content: T[];
-  totalElements: number;
-  totalPages: number;
-  number: number;
+  total: number;
+  page: number;
   size: number;
-  first: boolean;
-  last: boolean;
+  totalPages: number;
+  totalElements?: number;
 }
