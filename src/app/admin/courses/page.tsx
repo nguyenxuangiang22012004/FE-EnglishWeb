@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import {
   BookOpen,
@@ -9,28 +9,37 @@ import {
   Trash2,
   RefreshCw,
   Layers,
+  Eye,
 } from 'lucide-react';
 import { courseService, Course } from '@/services/courseService';
+import { Pagination } from '@/components/shared/Pagination';
 
 export default function AdminCoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const fetchCourses = async () => {
+  const PAGE_SIZE = 10;
+
+  const fetchCourses = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await courseService.getCourses(0, 50);
+      const res = await courseService.getCourses(page, PAGE_SIZE);
       setCourses(res.content || []);
+      setTotal(res.total ?? res.totalElements ?? 0);
+      setTotalPages(res.totalPages || 1);
     } catch (err) {
       console.error('Failed to load courses', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [page]);
 
   useEffect(() => {
     fetchCourses();
-  }, []);
+  }, [fetchCourses]);
 
   const handleDeleteCourse = async (course: Course) => {
     if (!confirm(`Bạn có chắc chắn muốn xóa khóa học "${course.name}"? Mọi chủ đề và bài làm liên quan sẽ bị xóa.`)) {
@@ -141,8 +150,15 @@ export default function AdminCoursesPage() {
                       <div className="flex items-center justify-end gap-1.5">
                         <Link
                           href={`/admin/courses/${course.id}`}
+                          className="p-2 text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-xl transition-all"
+                          title="Xem chi tiết"
+                        >
+                          <Eye size={16} />
+                        </Link>
+                        <Link
+                          href={`/admin/courses/${course.id}/edit`}
                           className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-xl transition-all"
-                          title="Chỉnh sửa & Quản lý Topics"
+                          title="Chỉnh sửa khóa học"
                         >
                           <Edit2 size={16} />
                         </Link>
@@ -161,6 +177,16 @@ export default function AdminCoursesPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          pageSize={PAGE_SIZE}
+          onPageChange={(p) => setPage(p)}
+          itemLabel="khóa học"
+        />
       </div>
     </div>
   );

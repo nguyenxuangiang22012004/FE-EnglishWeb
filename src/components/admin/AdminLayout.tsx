@@ -36,6 +36,16 @@ const adminNavItems = [
     label: 'Quản lý Khóa học',
     icon: <BookOpen size={18} />,
   },
+  {
+    href: '/admin/topics',
+    label: 'Quản lý Chủ đề',
+    icon: <Layers size={18} />,
+  },
+  {
+    href: '/admin/lessons',
+    label: 'Quản lý Bài làm',
+    icon: <FileText size={18} />,
+  },
 ];
 
 interface AdminLayoutProps {
@@ -58,7 +68,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     router.push('/auth/login');
   };
 
-  const Sidebar = () => (
+  const renderSidebarContent = () => (
     <aside className="w-64 flex-shrink-0 h-full flex flex-col bg-surface-900 border-r border-white/[0.06]">
       {/* Logo */}
       <div className="h-20 flex items-center gap-3 px-6 border-b border-white/[0.06]">
@@ -130,7 +140,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     <div className="flex h-screen overflow-hidden bg-[#0a0a0f]">
       {/* Desktop Sidebar */}
       <div className="hidden md:flex">
-        <Sidebar />
+        {renderSidebarContent()}
       </div>
 
       {/* Mobile Overlay */}
@@ -147,7 +157,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <Sidebar />
+        {renderSidebarContent()}
       </div>
 
       {/* Main content */}

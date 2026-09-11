@@ -1,34 +1,28 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import {
   Layers,
-  Plus,
-  Edit2,
-  Trash2,
   RefreshCw,
   FileText,
   Filter,
   BookOpen,
+  Eye,
+  Edit2,
+  Trash2,
 } from 'lucide-react';
-import {
-  courseService,
-  Course,
-  Topic,
-} from '@/services/courseService';
-import { TopicFormModal } from '@/components/admin/courses/TopicFormModal';
-import Link from 'next/link';
+import { courseService, Course, Topic } from '@/services/courseService';
+import { Pagination } from '@/components/shared/Pagination';
 
 export default function AdminTopicsPage() {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<string>('ALL');
+  const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
 
-  // Modals state
-  const [topicModalOpen, setTopicModalOpen] = useState(false);
-  const [editingTopic, setEditingTopic] = useState<Topic | null>(null);
+  const PAGE_SIZE = 10;
 
   const loadData = async () => {
     setLoading(true);
@@ -54,38 +48,11 @@ export default function AdminTopicsPage() {
     ? topics
     : topics.filter((t: any) => t.courseId === selectedCourseId || t.course?.id === selectedCourseId);
 
-  const handleCreateOrUpdateTopic = async (data: any) => {
-    // Nếu tạo mới mà chọn ALL thì yêu cầu chọn courseId hoặc lấy course đầu tiên
-    let courseId = editingTopic ? (editingTopic as any).courseId || (editingTopic as any).course?.id : selectedCourseId;
-    if (!courseId || courseId === 'ALL') {
-      if (courses.length === 0) {
-        alert('Cần tạo khóa học trước khi thêm chủ đề.');
-        return;
-      }
-      courseId = courses[0].id;
-    }
-
-    setSubmitting(true);
-    try {
-      if (editingTopic) {
-        await courseService.updateTopic(editingTopic.id, data);
-      } else {
-        await courseService.createTopic(courseId, data);
-      }
-      setTopicModalOpen(false);
-      setEditingTopic(null);
-      await loadData();
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Có lỗi xảy ra khi lưu chủ đề');
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const totalPages = Math.ceil(filteredTopics.length / PAGE_SIZE) || 1;
+  const paginatedTopics = filteredTopics.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   const handleDeleteTopic = async (topic: Topic) => {
-    if (!confirm(`Bạn có chắc muốn xóa chủ đề "${topic.name}"? Toàn bộ bài làm trong chủ đề này sẽ bị xóa.`)) {
-      return;
-    }
+    if (!confirm(`Bạn có chắc muốn xóa chủ đề "${topic.name}"? Toàn bộ bài làm trong chủ đề này sẽ bị xóa.`)) return;
     try {
       await courseService.deleteTopic(topic.id);
       await loadData();
@@ -109,13 +76,16 @@ export default function AdminTopicsPage() {
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Course filter selector */}
+          {/* Course filter */}
           <div className="flex items-center gap-2 bg-surface-800 border border-white/10 px-3 py-1.5 rounded-xl">
             <Filter size={14} className="text-slate-400" />
             <span className="text-xs text-slate-400 font-medium hidden sm:inline">Khóa học:</span>
             <select
               value={selectedCourseId}
-              onChange={(e) => setSelectedCourseId(e.target.value)}
+              onChange={(e) => {
+                setSelectedCourseId(e.target.value);
+                setPage(0);
+              }}
               className="bg-transparent text-xs text-white focus:outline-none cursor-pointer"
             >
               <option value="ALL" className="bg-surface-900 text-white">Tất cả khóa học</option>
@@ -133,16 +103,6 @@ export default function AdminTopicsPage() {
           >
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
-
-          <button
-            onClick={() => {
-              setEditingTopic(null);
-              setTopicModalOpen(true);
-            }}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-white bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 shadow-lg shadow-blue-500/20 transition-all text-sm"
-          >
-            <Plus size={16} /> Thêm Chủ đề
-          </button>
         </div>
       </div>
 
@@ -152,21 +112,11 @@ export default function AdminTopicsPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-white/[0.06]">
-                <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider w-16">
-                  Thứ tự
-                </th>
-                <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Tên chủ đề
-                </th>
-                <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Thuộc khóa học
-                </th>
-                <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Lời chào Mascot
-                </th>
-                <th className="px-6 py-3.5 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Thao tác
-                </th>
+                <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider w-16">STT</th>
+                <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Tên chủ đề</th>
+                <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Thuộc khóa học</th>
+                <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Lời chào Mascot</th>
+                <th className="px-6 py-3.5 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/[0.03]">
@@ -187,8 +137,9 @@ export default function AdminTopicsPage() {
                   </td>
                 </tr>
               ) : (
-                filteredTopics.map((topic: any) => {
-                  const courseName = topic.courseName || courses.find((c) => c.id === (topic.courseId || topic.course?.id))?.name || '—';
+                paginatedTopics.map((topic: any) => {
+                  const courseName = courses.find((c) => c.id === (topic.courseId || topic.course?.id))?.name || '—';
+                  const courseId = topic.courseId || topic.course?.id || '';
                   return (
                     <tr key={topic.id} className="hover:bg-white/[0.02] transition-colors">
                       <td className="px-6 py-4">
@@ -202,18 +153,26 @@ export default function AdminTopicsPage() {
                             <Layers size={16} className="text-blue-400" />
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-slate-200">{topic.name}</p>
+                            <Link
+                              href={`/admin/topics/${topic.id}`}
+                              className="text-sm font-semibold text-slate-200 hover:text-blue-400 transition-colors"
+                            >
+                              {topic.name}
+                            </Link>
                             {topic.description && (
-                              <p className="text-xs text-slate-500 line-clamp-1 max-w-xs">{topic.description}</p>
+                              <p className="text-xs text-slate-500 line-clamp-1 max-w-xs mt-0.5">{topic.description}</p>
                             )}
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="px-2.5 py-1 rounded-lg bg-red-500/10 text-red-300 border border-red-500/20 text-xs font-medium flex items-center gap-1.5 w-fit">
+                        <Link
+                          href={`/admin/courses/${courseId}`}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/20 text-red-300 text-xs font-medium hover:bg-red-500/20 transition-colors"
+                        >
                           <BookOpen size={12} />
                           {courseName}
-                        </span>
+                        </Link>
                       </td>
                       <td className="px-6 py-4 text-xs text-slate-400 max-w-xs truncate italic">
                         {topic.introMessage ? `"${topic.introMessage}"` : '—'}
@@ -224,18 +183,22 @@ export default function AdminTopicsPage() {
                             href={`/admin/lessons?topicId=${topic.id}`}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 border border-emerald-500/30 text-xs font-medium transition-all"
                           >
-                            <FileText size={13} /> Xem bài làm
+                            <FileText size={12} /> Bài làm
                           </Link>
-                          <button
-                            onClick={() => {
-                              setEditingTopic(topic);
-                              setTopicModalOpen(true);
-                            }}
-                            className="p-1.5 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                          <Link
+                            href={`/admin/topics/${topic.id}`}
+                            className="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors"
+                            title="Xem chi tiết"
+                          >
+                            <Eye size={15} />
+                          </Link>
+                          <Link
+                            href={`/admin/topics/${topic.id}/edit`}
+                            className="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors"
                             title="Chỉnh sửa chủ đề"
                           >
                             <Edit2 size={15} />
-                          </button>
+                          </Link>
                           <button
                             onClick={() => handleDeleteTopic(topic)}
                             className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
@@ -252,19 +215,17 @@ export default function AdminTopicsPage() {
             </tbody>
           </table>
         </div>
-      </div>
 
-      {topicModalOpen && (
-        <TopicFormModal
-          initialTopic={editingTopic}
-          isSubmitting={submitting}
-          onSubmit={handleCreateOrUpdateTopic}
-          onCancel={() => {
-            setTopicModalOpen(false);
-            setEditingTopic(null);
-          }}
+        {/* Pagination */}
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          total={filteredTopics.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={(p) => setPage(p)}
+          itemLabel="chủ đề"
         />
-      )}
+      </div>
     </div>
   );
 }

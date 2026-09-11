@@ -3,9 +3,11 @@
 import React, { useState } from 'react';
 import { useImportVocabulary } from '@/components/hooks/useImportVocabulary';
 import { useAIImport } from '@/components/hooks/useAIImport';
+import { useExcelImport } from '@/components/hooks/useExcelImport';
 import { DeckSelectModal } from '@/components/ui/DeckSelectModal';
 import { ImportTabAITopic } from './import/ImportTabAITopic';
 import { ImportTabAIImage } from './import/ImportTabAIImage';
+import { ImportTabExcel } from './import/ImportTabExcel';
 import { AIVocabItem } from '@/services/importAIService';
 
 // ─── Tab config ───────────────────────────────────────────────────────────────
@@ -13,6 +15,7 @@ import { AIVocabItem } from '@/services/importAIService';
 const TABS = [
     { id: 'topic' as const, label: '✨ Nhập chủ đề', color: 'indigo' },
     { id: 'image' as const, label: '🖼️ Upload ảnh', color: 'cyan' },
+    { id: 'excel' as const, label: '📊 Import Excel', color: 'emerald' },
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -33,7 +36,10 @@ export const ImportVocabularyPage: React.FC = () => {
     };
 
     const aiImport = useAIImport(handleAISuccess);
+    const excelImport = useExcelImport(handleAISuccess);
 
+    type TabId = 'topic' | 'image' | 'excel';
+    const [activeTab, setActiveTab] = useState<TabId>('topic');
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     const handleOpenModal = () => {
@@ -52,6 +58,15 @@ export const ImportVocabularyPage: React.FC = () => {
     const handleClearAll = () => {
         clearAll();
         aiImport.handleRemoveImage();
+        excelImport.handleRemoveFile();
+    };
+
+    const handleTabSwitch = (tab: TabId) => {
+        setActiveTab(tab);
+        // sync AIImport tab cho 2 tab AI
+        if (tab === 'topic' || tab === 'image') {
+            aiImport.setActiveTab(tab);
+        }
     };
 
     return (
@@ -77,12 +92,14 @@ export const ImportVocabularyPage: React.FC = () => {
                     <button
                         key={tab.id}
                         id={`import-tab-${tab.id}`}
-                        onClick={() => aiImport.setActiveTab(tab.id)}
+                        onClick={() => handleTabSwitch(tab.id)}
                         className={`px-5 py-2.5 rounded-xl font-semibold text-sm transition-all ${
-                            aiImport.state.activeTab === tab.id
+                            activeTab === tab.id
                                 ? tab.id === 'topic'
                                     ? 'bg-gradient-to-r from-accent-indigo to-accent-cyan text-white shadow-lg shadow-accent-indigo/20'
-                                    : 'bg-gradient-to-r from-accent-cyan to-accent-emerald text-white shadow-lg shadow-accent-cyan/20'
+                                    : tab.id === 'image'
+                                    ? 'bg-gradient-to-r from-accent-cyan to-accent-emerald text-white shadow-lg shadow-accent-cyan/20'
+                                    : 'bg-gradient-to-r from-accent-emerald to-accent-cyan text-white shadow-lg shadow-accent-emerald/20'
                                 : 'text-slate-400 hover:text-slate-300 hover:bg-white/[0.04]'
                         }`}
                     >
@@ -95,7 +112,7 @@ export const ImportVocabularyPage: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Left – Active tab input */}
                 <div>
-                    {aiImport.state.activeTab === 'topic' ? (
+                    {activeTab === 'topic' ? (
                         <ImportTabAITopic
                             topic={aiImport.state.topic}
                             wordCount={aiImport.state.wordCount}
@@ -108,7 +125,7 @@ export const ImportVocabularyPage: React.FC = () => {
                             onGenerate={aiImport.generateFromTopic}
                             onCancel={aiImport.cancelGeneration}
                         />
-                    ) : (
+                    ) : activeTab === 'image' ? (
                         <ImportTabAIImage
                             imagePreview={aiImport.state.imagePreview}
                             wordCount={aiImport.state.wordCount}
@@ -121,6 +138,15 @@ export const ImportVocabularyPage: React.FC = () => {
                             onWordCountChange={aiImport.handleWordCountChange}
                             onGenerate={aiImport.generateFromImage}
                             onCancel={aiImport.cancelGeneration}
+                        />
+                    ) : (
+                        <ImportTabExcel
+                            fileName={excelImport.state.fileName}
+                            isLoading={excelImport.state.isLoading}
+                            error={excelImport.state.error}
+                            onFileSelect={excelImport.handleFileSelect}
+                            onRemoveFile={excelImport.handleRemoveFile}
+                            onPreview={excelImport.handlePreview}
                         />
                     )}
                 </div>

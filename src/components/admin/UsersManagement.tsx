@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import adminService from '@/services/adminService';
 import { AdminUserDTO } from '@/types/admin';
+import { Pagination } from '@/components/shared/Pagination';
 
 // ─── Role Badge ─────────────────────────────────────────────────────────────
 const RoleBadge: React.FC<{ role: string }> = ({ role }) => {
@@ -295,45 +296,14 @@ export const UsersManagement: React.FC = () => {
         </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-white/[0.06] flex items-center justify-between">
-            <p className="text-sm text-slate-500">
-              Trang {page + 1} / {totalPages} — {total.toLocaleString('vi-VN')} người dùng
-            </p>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                disabled={page === 0}
-                className="p-2 rounded-lg border border-white/[0.08] text-slate-400 hover:text-white hover:border-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              {Array.from({ length: Math.min(5, totalPages) }).map((_, i) => {
-                const pageNum = Math.max(0, Math.min(totalPages - 5, page - 2)) + i;
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => setPage(pageNum)}
-                    className={`w-9 h-9 rounded-lg text-sm font-medium transition-all ${
-                      pageNum === page
-                        ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                        : 'border border-white/[0.08] text-slate-400 hover:text-white hover:border-white/20'
-                    }`}
-                  >
-                    {pageNum + 1}
-                  </button>
-                );
-              })}
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                disabled={page >= totalPages - 1}
-                className="p-2 rounded-lg border border-white/[0.08] text-slate-400 hover:text-white hover:border-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          </div>
-        )}
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          pageSize={PAGE_SIZE}
+          onPageChange={(newPage) => setPage(newPage)}
+          itemLabel="người dùng"
+        />
       </div>
     </div>
   );
