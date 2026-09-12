@@ -193,13 +193,13 @@ export const QuickLookupModal: React.FC<QuickLookupModalProps> = ({ isOpen, onCl
 
             {/* Modal Box */}
             <div
-                className="relative w-full max-w-3xl bg-[#140e1c] border border-pink-500/30 rounded-3xl shadow-[0_0_60px_rgba(219,39,119,0.2)] overflow-hidden animate-fadeInScale flex flex-col max-h-[88vh]"
+                className="relative w-full max-w-3xl bg-[#0a0f1d] border border-blue-500/30 rounded-3xl shadow-[0_0_60px_rgba(30,58,138,0.35)] overflow-hidden animate-fadeInScale flex flex-col max-h-[88vh]"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Search Input Bar */}
-                <div className="p-4 sm:p-5 border-b border-pink-500/20">
-                    <div className="relative flex items-center bg-[#21142a] border border-pink-500/40 rounded-2xl px-4 py-3 focus-within:border-pink-500 focus-within:ring-2 focus-within:ring-pink-500/20 transition-all">
-                        <Search className="w-5 h-5 text-pink-400/80 mr-3 flex-shrink-0" />
+                <div className="p-4 sm:p-5 border-b border-blue-500/20">
+                    <div className="relative flex items-center bg-[#11192e] border border-blue-500/40 rounded-2xl px-4 py-3 focus-within:border-cyan-400 focus-within:ring-2 focus-within:ring-cyan-500/20 transition-all">
+                        <Search className="w-5 h-5 text-cyan-400/80 mr-3 flex-shrink-0" />
                         <input
                             ref={inputRef}
                             type="text"
@@ -210,7 +210,7 @@ export const QuickLookupModal: React.FC<QuickLookupModalProps> = ({ isOpen, onCl
                             className="w-full bg-transparent text-slate-100 placeholder:text-slate-500 text-base focus:outline-none"
                         />
                         {isSearchingSuggestions && (
-                            <Loader2 className="w-4 h-4 text-pink-400 animate-spin mr-2" />
+                            <Loader2 className="w-4 h-4 text-cyan-400 animate-spin mr-2" />
                         )}
                         {searchTerm && (
                             <button
@@ -236,8 +236,8 @@ export const QuickLookupModal: React.FC<QuickLookupModalProps> = ({ isOpen, onCl
                     {/* 1. Loading Details */}
                     {isLoadingDetails && (
                         <div className="flex flex-col items-center justify-center py-16 gap-3">
-                            <Loader2 className="w-9 h-9 text-pink-500 animate-spin" />
-                            <p className="text-sm text-pink-300 font-medium">Đang tra cứu từ điển quốc tế...</p>
+                            <Loader2 className="w-9 h-9 text-cyan-400 animate-spin" />
+                            <p className="text-sm text-cyan-300 font-medium">Đang tra cứu từ điển quốc tế...</p>
                         </div>
                     )}
 
@@ -245,22 +245,22 @@ export const QuickLookupModal: React.FC<QuickLookupModalProps> = ({ isOpen, onCl
                     {!isLoadingDetails && selectedResult && (
                         <div className="space-y-5 animate-fadeIn">
                             {/* Header Section */}
-                            <div className="p-5 rounded-2xl bg-[#21142a]/90 border border-pink-500/30">
+                            <div className="p-5 rounded-2xl bg-[#11192e]/90 border border-blue-500/30">
                                 <div className="flex items-start justify-between gap-4">
                                     <div className="space-y-1.5">
                                         <div className="flex items-center gap-3 flex-wrap">
-                                            <h3 className="text-3xl font-display font-bold text-pink-400">
+                                            <h3 className="text-3xl font-display font-bold text-cyan-400">
                                                 {selectedResult.word}
                                             </h3>
                                             <button
                                                 onClick={() => playAudio(selectedResult.word)}
-                                                className="p-2 rounded-xl bg-pink-500/20 hover:bg-pink-500/30 text-pink-300 transition-colors shadow-sm"
+                                                className="p-2 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-cyan-300 transition-colors shadow-sm"
                                                 title="Nghe phát âm chuẩn"
                                             >
                                                 <Volume2 className="w-4 h-4" />
                                             </button>
                                             {selectedResult.partOfSpeech && (
-                                                <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-pink-500/20 text-pink-300 border border-pink-500/30">
+                                                <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-500/20 text-cyan-300 border border-blue-500/30">
                                                     {formatPos(selectedResult.partOfSpeech)}
                                                 </span>
                                             )}
@@ -285,7 +285,7 @@ export const QuickLookupModal: React.FC<QuickLookupModalProps> = ({ isOpen, onCl
 
                                     <button
                                         onClick={() => setIsDeckModalOpen(true)}
-                                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold text-xs shadow-lg shadow-pink-500/20 transition-all hover:scale-[1.02] flex-shrink-0"
+                                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-semibold text-xs shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.02] flex-shrink-0"
                                     >
                                         <Plus className="w-4 h-4" />
                                         Lưu Flashcard
@@ -293,8 +293,8 @@ export const QuickLookupModal: React.FC<QuickLookupModalProps> = ({ isOpen, onCl
                                 </div>
 
                                 {/* Vietnamese Translation */}
-                                <div className="mt-4 pt-3 border-t border-pink-500/15">
-                                    <p className="text-[11px] text-pink-300/80 font-bold uppercase tracking-wider mb-0.5">
+                                <div className="mt-4 pt-3 border-t border-blue-500/15">
+                                    <p className="text-[11px] text-cyan-300/80 font-bold uppercase tracking-wider mb-0.5">
                                         Nghĩa Tiếng Việt
                                     </p>
                                     <p className="text-slate-100 text-xl font-bold">
@@ -305,7 +305,7 @@ export const QuickLookupModal: React.FC<QuickLookupModalProps> = ({ isOpen, onCl
 
                             {/* Part of Speech Entry Tabs */}
                             {selectedResult.entries && selectedResult.entries.length > 1 && (
-                                <div className="flex items-center gap-2 border-b border-pink-500/20 pb-2 overflow-x-auto">
+                                <div className="flex items-center gap-2 border-b border-blue-500/20 pb-2 overflow-x-auto">
                                     <span className="text-xs text-slate-400 font-medium mr-1 flex items-center gap-1">
                                         <Layers className="w-3.5 h-3.5" /> Phân loại:
                                     </span>
@@ -315,7 +315,7 @@ export const QuickLookupModal: React.FC<QuickLookupModalProps> = ({ isOpen, onCl
                                             onClick={() => setActiveEntryTab(idx)}
                                             className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all capitalize ${
                                                 activeEntryTab === idx
-                                                    ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-md'
+                                                    ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md'
                                                     : 'bg-white/[0.04] text-slate-300 hover:bg-white/[0.08]'
                                             }`}
                                         >
@@ -327,13 +327,13 @@ export const QuickLookupModal: React.FC<QuickLookupModalProps> = ({ isOpen, onCl
 
                             {/* Forms / Word inflections */}
                             {activeEntry?.forms && activeEntry.forms.length > 0 && (
-                                <div className="p-3.5 rounded-xl bg-[#21142a]/60 border border-white/5 flex items-center gap-2 flex-wrap text-xs">
-                                    <span className="text-pink-300 font-semibold flex items-center gap-1">
+                                <div className="p-3.5 rounded-xl bg-[#11192e]/60 border border-white/5 flex items-center gap-2 flex-wrap text-xs">
+                                    <span className="text-cyan-300 font-semibold flex items-center gap-1">
                                         <Tag className="w-3.5 h-3.5" /> Các biến thể:
                                     </span>
                                     {activeEntry.forms.slice(0, 5).map((f, i) => (
                                         <span key={i} className="px-2 py-0.5 rounded bg-white/[0.06] text-slate-300 font-mono">
-                                            <strong className="text-pink-400">{f.word}</strong>
+                                            <strong className="text-cyan-400">{f.word}</strong>
                                             {f.tags?.[0] ? ` (${f.tags[0]})` : ''}
                                         </span>
                                     ))}
@@ -342,7 +342,7 @@ export const QuickLookupModal: React.FC<QuickLookupModalProps> = ({ isOpen, onCl
 
                             {/* Senses & Definitions List */}
                             <div className="space-y-3">
-                                <h4 className="text-xs font-bold uppercase tracking-wider text-pink-300 flex items-center gap-1.5">
+                                <h4 className="text-xs font-bold uppercase tracking-wider text-cyan-300 flex items-center gap-1.5">
                                     <BookOpen className="w-4 h-4" /> Các tầng nghĩa & Định nghĩa chi tiết ({activeEntry?.senses?.length || 0})
                                 </h4>
 
@@ -351,11 +351,11 @@ export const QuickLookupModal: React.FC<QuickLookupModalProps> = ({ isOpen, onCl
                                         {activeEntry.senses.slice(0, 6).map((sense, idx) => (
                                             <div
                                                 key={idx}
-                                                className="p-4 rounded-2xl bg-[#1b1124] border border-pink-500/20 space-y-2 hover:border-pink-500/35 transition-all"
+                                                className="p-4 rounded-2xl bg-[#0d1527] border border-blue-500/20 space-y-2 hover:border-cyan-500/40 transition-all"
                                             >
                                                 {/* Definition */}
                                                 <div className="flex items-start gap-2.5">
-                                                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-pink-500/20 text-pink-300 text-xs font-bold flex items-center justify-center mt-0.5">
+                                                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-500/20 text-cyan-300 text-xs font-bold flex items-center justify-center mt-0.5">
                                                         {idx + 1}
                                                     </span>
                                                     <div className="flex-1">
@@ -365,7 +365,7 @@ export const QuickLookupModal: React.FC<QuickLookupModalProps> = ({ isOpen, onCl
                                                         {sense.tags && sense.tags.length > 0 && (
                                                             <div className="flex gap-1.5 mt-1.5">
                                                                 {sense.tags.map((t, i) => (
-                                                                    <span key={i} className="px-2 py-0.5 rounded text-[10px] font-semibold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                                                                    <span key={i} className="px-2 py-0.5 rounded text-[10px] font-semibold bg-cyan-500/10 text-cyan-300 border border-cyan-500/25">
                                                                         {t}
                                                                     </span>
                                                                 ))}
@@ -382,7 +382,7 @@ export const QuickLookupModal: React.FC<QuickLookupModalProps> = ({ isOpen, onCl
                                                                 <span>&ldquo;{ex}&rdquo;</span>
                                                                 <button
                                                                     onClick={() => playAudio(ex)}
-                                                                    className="p-1 rounded text-slate-400 hover:text-pink-300"
+                                                                    className="p-1 rounded text-slate-400 hover:text-cyan-300"
                                                                 >
                                                                     <Volume2 className="w-3.5 h-3.5" />
                                                                 </button>
@@ -394,8 +394,8 @@ export const QuickLookupModal: React.FC<QuickLookupModalProps> = ({ isOpen, onCl
                                                 {/* Quotes if any */}
                                                 {sense.quotes && sense.quotes.length > 0 && (
                                                     <div className="mt-2 pl-7">
-                                                        <div className="p-2 rounded-xl bg-purple-950/20 border border-purple-500/10 text-slate-400 text-xs flex items-start gap-2">
-                                                            <Quote className="w-3.5 h-3.5 text-purple-400 flex-shrink-0 mt-0.5" />
+                                                        <div className="p-2 rounded-xl bg-blue-950/30 border border-blue-500/20 text-slate-400 text-xs flex items-start gap-2">
+                                                            <Quote className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0 mt-0.5" />
                                                             <div>
                                                                 <p className="italic">&ldquo;{sense.quotes[0].text}&rdquo;</p>
                                                                 {sense.quotes[0].reference && (
@@ -415,8 +415,8 @@ export const QuickLookupModal: React.FC<QuickLookupModalProps> = ({ isOpen, onCl
 
                             {/* Synonyms & Antonyms */}
                             {selectedResult.synonyms && selectedResult.synonyms.length > 0 && (
-                                <div className="p-4 rounded-2xl bg-[#21142a]/60 border border-pink-500/20 space-y-2">
-                                    <p className="text-xs font-bold uppercase tracking-wider text-pink-300">
+                                <div className="p-4 rounded-2xl bg-[#11192e]/60 border border-blue-500/20 space-y-2">
+                                    <p className="text-xs font-bold uppercase tracking-wider text-cyan-300">
                                         Từ đồng nghĩa (Synonyms)
                                     </p>
                                     <div className="flex flex-wrap gap-2">
@@ -424,7 +424,7 @@ export const QuickLookupModal: React.FC<QuickLookupModalProps> = ({ isOpen, onCl
                                             <button
                                                 key={i}
                                                 onClick={() => handleSelectWord(s)}
-                                                className="px-2.5 py-1 rounded-lg text-xs bg-white/[0.04] text-slate-300 hover:text-pink-300 hover:bg-pink-500/15 cursor-pointer transition-all border border-white/[0.06]"
+                                                className="px-2.5 py-1 rounded-lg text-xs bg-white/[0.04] text-slate-300 hover:text-cyan-300 hover:bg-blue-500/20 cursor-pointer transition-all border border-white/[0.06]"
                                             >
                                                 {s}
                                             </button>
@@ -435,7 +435,7 @@ export const QuickLookupModal: React.FC<QuickLookupModalProps> = ({ isOpen, onCl
 
                             <button
                                 onClick={() => setSelectedResult(null)}
-                                className="text-xs text-pink-400 hover:underline pt-2 block font-medium"
+                                className="text-xs text-cyan-400 hover:underline pt-2 block font-medium"
                             >
                                 ← Quay lại danh sách gợi ý
                             </button>
@@ -454,12 +454,12 @@ export const QuickLookupModal: React.FC<QuickLookupModalProps> = ({ isOpen, onCl
                                         onMouseEnter={() => setSelectedIndex(idx)}
                                         className={`flex items-center justify-between p-3.5 rounded-2xl cursor-pointer transition-all ${
                                             isSelected
-                                                ? 'bg-[#2a1737] border border-pink-500/40 shadow-md'
-                                                : 'hover:bg-[#1f1228] border border-transparent'
+                                                ? 'bg-[#16223b] border border-cyan-500/40 shadow-md'
+                                                : 'hover:bg-[#11192e] border border-transparent'
                                         }`}
                                     >
                                         <div className="flex items-baseline gap-2.5 flex-1 min-w-0 pr-4">
-                                            <span className="font-bold text-base text-pink-400 tracking-wide">
+                                            <span className="font-bold text-base text-cyan-400 tracking-wide">
                                                 {item.word}
                                             </span>
                                             <span className="text-slate-400 text-xs truncate">
@@ -468,7 +468,7 @@ export const QuickLookupModal: React.FC<QuickLookupModalProps> = ({ isOpen, onCl
                                         </div>
 
                                         <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-white/[0.06] text-slate-300 border border-white/[0.08] flex items-center gap-1">
-                                            <CornerDownLeft className="w-3 h-3 text-pink-400" /> tra từ
+                                            <CornerDownLeft className="w-3 h-3 text-cyan-400" /> tra từ
                                         </span>
                                     </div>
                                 );
@@ -480,20 +480,20 @@ export const QuickLookupModal: React.FC<QuickLookupModalProps> = ({ isOpen, onCl
                     {!isLoadingDetails && !selectedResult && searchTerm.trim() && suggestions.length === 0 && !isSearchingSuggestions && (
                         <div
                             onClick={() => handleSelectWord(searchTerm.trim())}
-                            className="flex items-center justify-between p-4 rounded-2xl bg-[#21142a] border border-pink-500/30 hover:border-pink-500 cursor-pointer transition-all"
+                            className="flex items-center justify-between p-4 rounded-2xl bg-[#11192e] border border-blue-500/30 hover:border-cyan-400 cursor-pointer transition-all"
                         >
                             <div className="flex items-center gap-3">
-                                <Sparkles className="w-5 h-5 text-pink-400" />
+                                <Sparkles className="w-5 h-5 text-cyan-400" />
                                 <div>
                                     <p className="text-slate-200 font-medium">
-                                        Tra từ &ldquo;<span className="text-pink-400 font-bold">{searchTerm}</span>&rdquo;
+                                        Tra từ &ldquo;<span className="text-cyan-400 font-bold">{searchTerm}</span>&rdquo;
                                     </p>
                                     <p className="text-xs text-slate-400">
                                         Nhấn Enter để tra từ điển quốc tế
                                     </p>
                                 </div>
                             </div>
-                            <CornerDownLeft className="w-4 h-4 text-pink-400" />
+                            <CornerDownLeft className="w-4 h-4 text-cyan-400" />
                         </div>
                     )}
 
@@ -518,18 +518,12 @@ export const QuickLookupModal: React.FC<QuickLookupModalProps> = ({ isOpen, onCl
                                             <div
                                                 key={item.id}
                                                 onClick={() => {
-                                                    setSelectedResult({
-                                                        word: item.word,
-                                                        partOfSpeech: item.partOfSpeech,
-                                                        pronunciation: item.pronunciation,
-                                                        meaning: item.meaning,
-                                                        example: item.example
-                                                    });
+                                                    setSelectedResult(item);
                                                 }}
-                                                className="flex items-center justify-between p-3 rounded-2xl hover:bg-[#21142a] border border-transparent hover:border-pink-500/20 cursor-pointer transition-all"
+                                                className="flex items-center justify-between p-3 rounded-2xl hover:bg-[#11192e] border border-transparent hover:border-blue-500/20 cursor-pointer transition-all"
                                             >
                                                 <div className="flex items-baseline gap-2.5">
-                                                    <span className="font-bold text-pink-400 text-sm">
+                                                    <span className="font-bold text-cyan-400 text-sm">
                                                         {item.word}
                                                     </span>
                                                     {item.pronunciation && (
@@ -556,7 +550,7 @@ export const QuickLookupModal: React.FC<QuickLookupModalProps> = ({ isOpen, onCl
                 </div>
 
                 {/* Footer Bar */}
-                <div className="px-5 py-3.5 bg-[#170e20] border-t border-pink-500/20 flex items-center justify-between text-xs text-slate-400">
+                <div className="px-5 py-3.5 bg-[#0b101f] border-t border-blue-500/20 flex items-center justify-between text-xs text-slate-400">
                     <div className="flex items-center gap-4">
                         <span className="flex items-center gap-1.5">
                             <kbd className="px-2 py-0.5 rounded-md bg-white/[0.08] text-slate-300 font-mono text-[11px] border border-white/[0.1]">
@@ -572,7 +566,7 @@ export const QuickLookupModal: React.FC<QuickLookupModalProps> = ({ isOpen, onCl
                         </span>
                     </div>
                     <div className="flex items-center gap-1 text-slate-400/90 font-medium">
-                        <Globe className="w-3.5 h-3.5 text-pink-400/70" />
+                        <Globe className="w-3.5 h-3.5 text-cyan-400/80" />
                         <span>Hoạt động ở mọi trang</span>
                     </div>
                 </div>

@@ -7,6 +7,7 @@ interface VocabularyCardProps {
   pronunciation: string;
   imageUrl?: string;
   example?: string;
+  onPlayAudio?: () => void;
 }
 
 export const VocabularyCard: React.FC<VocabularyCardProps> = ({
@@ -15,11 +16,16 @@ export const VocabularyCard: React.FC<VocabularyCardProps> = ({
   pronunciation,
   imageUrl,
   example,
+  onPlayAudio,
 }) => {
   const [isFlipped, setIsFlipped] = useState(false);
 
   const playAudio = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (onPlayAudio) {
+      onPlayAudio();
+      return;
+    }
     const utterance = new SpeechSynthesisUtterance(word);
     utterance.lang = 'en-US';
     window.speechSynthesis.speak(utterance);

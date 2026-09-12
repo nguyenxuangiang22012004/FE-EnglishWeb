@@ -2,9 +2,10 @@
 
 import React, { useState, useRef, useCallback } from 'react';
 import { Mic, Square, Loader2 } from 'lucide-react';
+import { startListening } from '@/utils/speech';
 
 interface VoiceRecorderProps {
-  onRecordingComplete: (audioBlob: Blob, audioUrl: string) => void;
+  onRecordingComplete: (audioBlob: Blob, audioUrl: string, transcript?: string) => void;
   isProcessing?: boolean;
 }
 
@@ -19,9 +20,12 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const recognitionRef = useRef<any>(null);
+  const transcriptRef = useRef<string>('');
 
   const startRecording = useCallback(async () => {
     setPermissionError('');
+    transcriptRef.current = '';
     try {
       // Yêu cầu mic với chất lượng cao
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -72,7 +76,8 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: mimeType });
         const url = URL.createObjectURL(blob);
-        onRecordingComplete(blob, url);
+        const finalTranscript = transcriptRef.current.trim();
+        onRecordingComplete(blob, url, finalTranscript);
 
         // Dọn dẹp: tắt mic + đóng AudioContext
         stream.getTracks().forEach((t) => t.stop());
@@ -80,6 +85,24 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
         streamRef.current = null;
         audioContextRef.current = null;
       };
+
+      // Đồng thời chạy Web Speech Recognition để bắt text người nói
+      try {
+        recognitionRef.current = startListening(
+          (text: string) => {
+            transcriptRef.current = text;
+          },
+          (err: any) => {
+            console.warn('Speech recognition warn:', err);
+          },
+          () => {
+            // onEnd
+          },
+          'en-US'
+        );
+      } catch (speechErr) {
+        console.warn('Could not start speech recognition:', speechErr);
+      }
 
       // Thu từng chunk mỗi 100ms để dữ liệu đầy đủ
       mediaRecorder.start(100);
@@ -96,6 +119,13 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {
+          // ignore
+        }
+      }
       setIsRecording(false);
     }
   }, [isRecording]);
@@ -149,4 +179,3 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
 };
 
 export default VoiceRecorder;
-

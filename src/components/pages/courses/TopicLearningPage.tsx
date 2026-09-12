@@ -5,6 +5,7 @@ import { VoiceRecorder } from '@/components/ui/courses/VoiceRecorder';
 import { RecordingPlayback } from '@/components/ui/courses/RecordingPlayback';
 import { ChatBubble } from '@/components/ui/courses/ChatBubble';
 import { FillBlankCard } from '@/components/ui/courses/FillBlankCard';
+import { SituationEvaluationCard } from '@/components/ui/courses/SituationEvaluationCard';
 import { Volume2, Loader2, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   courseService,
@@ -14,6 +15,10 @@ import {
   TopicProgress,
   TopicFinalScore,
 } from '@/services/courseService';
+import {
+  evaluateSituationResponse,
+  SituationEvaluationResult,
+} from '@/services/situationEvaluationService';
 import { useRouter } from 'next/navigation';
 
 interface Recording {
@@ -42,6 +47,10 @@ export const TopicLearningPage: React.FC<TopicLearningPageProps> = ({ courseId, 
   const [recordingsMap, setRecordingsMap] = useState<Record<string, Recording[]>>({});
   const [showingPlaybackSet, setShowingPlaybackSet] = useState<Record<string, boolean>>({});
 
+  // Trạng thái đánh giá Tình huống (SITUATION Evaluation)
+  const [situationEvalMap, setSituationEvalMap] = useState<Record<string, SituationEvaluationResult>>({});
+  const [isEvaluatingSituation, setIsEvaluatingSituation] = useState(false);
+
   const getTopicProgress = useCallback(
     (): TopicProgress | undefined =>
       courseProgress?.topicProgresses.find((p) => p.topicId === topicId),
@@ -60,43 +69,33 @@ export const TopicLearningPage: React.FC<TopicLearningPageProps> = ({ courseId, 
 
   useEffect(() => {
     const fetchData = async () => {
-      setLoading(true);
       try {
-        const [courseDetail, progress, topicLessons] = await Promise.all([
-          courseService.getCourseDetail(courseId),
+        const [topicData, lessonsData, progressData] = await Promise.all([
+          courseService.getTopicById(topicId),
+          courseService.getLessonsByTopic(topicId),
           courseService.getCourseProgress(courseId).catch(() => null),
-          courseService.getLessonsByTopic(topicId)
         ]);
 
-        const currentTopic = courseDetail.topics?.find(t => t.id === topicId) || null;
-        setTopic(currentTopic);
-        setLessons(topicLessons.sort((a, b) => a.orderIndex - b.orderIndex));
-        
-        if (progress) {
-          setCourseProgress(progress);
-          const tProgress = progress.topicProgresses.find(p => p.topicId === topicId);
-          
-          const resumeStep = tProgress?.currentStep ?? 0;
-          setStep(resumeStep);
+        setTopic(topicData);
+        setLessons(lessonsData);
+        setCourseProgress(progressData);
 
-          if (tProgress?.status !== 'COMPLETED' && currentTopic) {
-            courseService.updateTopicProgress(topicId, {
-              currentStep: resumeStep,
-              status: 'IN_PROGRESS',
-              currentLessonId: tProgress?.currentLessonId ?? null,
-            }).then((updated) => {
-               setCourseProgress(prev => {
-                 if (!prev) return prev;
-                 return {
-                   ...prev,
-                   topicProgresses: prev.topicProgresses.map(p => p.topicId === topicId ? updated : p)
-                 };
-               });
-            }).catch(console.error);
+        const currentTopicProgress = progressData?.topicProgresses.find(
+          (p) => p.topicId === topicId
+        );
+
+        if (currentTopicProgress) {
+          const currentStep = currentTopicProgress.currentStep;
+          if (currentStep > lessonsData.length) {
+            setStep(0);
+          } else {
+            setStep(currentStep);
           }
+        } else {
+          setStep(0);
         }
-      } catch (error) {
-        console.error('Failed to fetch topic data', error);
+      } catch (err) {
+        console.error('Failed to load topic learning data', err);
       } finally {
         setLoading(false);
       }
@@ -113,9 +112,6 @@ export const TopicLearningPage: React.FC<TopicLearningPageProps> = ({ courseId, 
       setIsSaving(true);
 
       try {
-        // lessonScore không còn được dùng cho điểm số hiển thị,
-        // nhưng vẫn giữ API call để tương thích backend
-
         const nextLessonId = lessons[nextStep - 1]?.id ?? null;
 
         const promises: Promise<any>[] = [
@@ -152,7 +148,6 @@ export const TopicLearningPage: React.FC<TopicLearningPageProps> = ({ courseId, 
         console.error('Failed to save progress', err);
       } finally {
         setIsSaving(false);
-        // KHÔNG reset recordings của các bước khác — chỉ chuyển step
         setStep(nextStep);
       }
     },
@@ -202,6 +197,7 @@ export const TopicLearningPage: React.FC<TopicLearningPageProps> = ({ courseId, 
       });
       setRecordingsMap({});
       setShowingPlaybackSet({});
+      setSituationEvalMap({});
       setFinalScoreData(null);
       setStep(0);
       setCompletedSaved(false);
@@ -212,7 +208,6 @@ export const TopicLearningPage: React.FC<TopicLearningPageProps> = ({ courseId, 
     }
   };
 
-
   /** Thêm bản ghi mới vào danh sách của lesson hiện tại */
   const handleRecordingComplete = (audioBlob: Blob, audioUrl: string) => {
     const key = `step-${step}`;
@@ -221,6 +216,38 @@ export const TopicLearningPage: React.FC<TopicLearningPageProps> = ({ courseId, 
       return { ...prev, [key]: [...existing, { url: audioUrl, index: existing.length + 1 }] };
     });
     setShowingPlaybackSet((prev) => ({ ...prev, [key]: true }));
+  };
+
+  /** Xử lý khi thu âm tình huống hoàn thành: Gửi request đánh giá đến AI */
+  const handleSituationRecordingComplete = async (
+    audioBlob: Blob,
+    audioUrl: string,
+    transcript?: string,
+    situationText?: string
+  ) => {
+    const key = `step-${step}`;
+    const userSpeech = transcript || 'Hello';
+    const situation = situationText || '';
+
+    setIsEvaluatingSituation(true);
+    try {
+      const evalResult = await evaluateSituationResponse(situation, userSpeech);
+      setSituationEvalMap((prev) => ({ ...prev, [key]: evalResult }));
+    } catch (error) {
+      console.error('Situation evaluation error:', error);
+    } finally {
+      setIsEvaluatingSituation(false);
+    }
+  };
+
+  /** Thử nói lại tình huống */
+  const handleRetrySituation = () => {
+    const key = `step-${step}`;
+    setSituationEvalMap((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
   };
 
   /** Ghi thêm: ẩn playback của lesson hiện tại, giữ nguyên danh sách */
@@ -248,275 +275,283 @@ export const TopicLearningPage: React.FC<TopicLearningPageProps> = ({ courseId, 
       setCompletedSaved(true);
       handleCompleteTopic();
     }
-  }, [step, lessons.length, topic, completedSaved, handleCompleteTopic]);
+  }, [step, lessons, topic, completedSaved, handleCompleteTopic]);
 
   if (loading) {
     return (
-      <div className="w-full flex items-center justify-center min-h-[50vh]">
-        <Loader2 className="animate-spin text-blue-500" size={48} />
+      <div className="flex flex-col items-center justify-center min-h-[500px] text-slate-400 gap-4">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        <p>Đang tải bài học...</p>
       </div>
     );
   }
-
-  if (!topic) {
-    return (
-      <div className="w-full flex items-center justify-center min-h-[50vh]">
-        <p className="text-slate-400">Không tìm thấy chủ đề.</p>
-      </div>
-    );
-  }
-
-  const totalSteps = lessons.length + 1;
-  const isWinStep = step > lessons.length;
 
   const currentLesson = step > 0 && step <= lessons.length ? lessons[step - 1] : null;
-  const content = currentLesson?.contentJson
-    ? typeof currentLesson.contentJson === 'string'
-      ? JSON.parse(currentLesson.contentJson)
-      : currentLesson.contentJson
-    : {};
+  const isIntroStep = step === 0;
+  const isWinStep = step > lessons.length;
 
-  // Derived: recordings và playback state của lesson hiện tại
-  const recordingKey = `step-${step}`;
-  const recordings = recordingsMap[recordingKey] ?? [];
-  const isShowingPlayback = showingPlaybackSet[recordingKey] ?? false;
+  let content: any = {};
+  if (currentLesson?.contentJson) {
+    try {
+      content = JSON.parse(currentLesson.contentJson);
+    } catch {
+      content = {};
+    }
+  }
+
+  const recordings = recordingsMap[`step-${step}`] ?? [];
+  const isShowingPlayback = showingPlaybackSet[`step-${step}`] ?? false;
+  const currentSituationEval = situationEvalMap[`step-${step}`] ?? null;
 
   return (
-    <div className="w-full flex flex-col items-center justify-center py-4">
-      <div className="w-full max-w-6xl relative flex items-center justify-center px-4 md:px-24">
-        
-        {/* Side Navigation Buttons */}
+    <div className="flex flex-col min-h-screen bg-slate-900 text-slate-100 relative pb-12">
+      {/* Top Bar Navigation */}
+      <div className="w-full max-w-4xl mx-auto p-4 flex items-center justify-between border-b border-white/10">
         <button
-          onClick={handlePrevStep}
-          disabled={step === 0}
-          className="absolute left-0 md:left-4 top-1/2 -translate-y-1/2 p-3 bg-slate-800/80 hover:bg-slate-700 text-slate-300 rounded-full transition-all disabled:opacity-30 disabled:cursor-not-allowed z-10 shadow-xl border border-white/10 hidden md:flex"
+          onClick={() => router.push(`/courses/${courseId}`)}
+          className="p-2 hover:bg-white/5 rounded-full text-slate-400 hover:text-white transition-colors"
+          title="Thoát bài học"
         >
-          <ChevronLeft size={28} />
+          ✕
         </button>
 
-        <button
-          onClick={handleNextStepNavigation}
-          disabled={step >= maxAllowedStep || step >= totalSteps - 1}
-          className="absolute right-0 md:right-4 top-1/2 -translate-y-1/2 p-3 bg-slate-800/80 hover:bg-slate-700 text-slate-300 rounded-full transition-all disabled:opacity-30 disabled:cursor-not-allowed z-10 shadow-xl border border-white/10 hidden md:flex"
-        >
-          <ChevronRight size={28} />
-        </button>
-
-        <div className="w-full max-w-4xl bg-surface-800 shadow-sm rounded-3xl p-8 min-h-[80vh] flex flex-col relative overflow-hidden text-slate-100 border border-white/5">
-        
-        {/* Header Progress & Back Button */}
-        <div className="flex items-center gap-4 mb-8">
-          <button
-            onClick={() => router.push(`/courses/${courseId}`)}
-            className="p-2 hover:bg-white/10 rounded-full transition-colors text-slate-400 hover:text-white"
-          >
-            ←
-          </button>
-          <div className="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
+        <div className="flex-1 max-w-md mx-6">
+          <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
             <div
-              className="h-full bg-blue-500 transition-all duration-500"
-              style={{ width: `${(step / totalSteps) * 100}%` }}
+              className="bg-blue-500 h-full transition-all duration-300 rounded-full"
+              style={{
+                width: `${
+                  isIntroStep
+                    ? 5
+                    : isWinStep
+                    ? 100
+                    : Math.round((step / lessons.length) * 100)
+                }%`,
+              }}
             />
           </div>
-          {isSaving && (
-            <div className="flex items-center gap-1 text-xs text-slate-400">
-              <Loader2 size={12} className="animate-spin" />
-              Đang lưu...
-            </div>
-          )}
         </div>
 
-        {/* Dynamic Content based on Step */}
-        <div className="flex-1 flex flex-col justify-center items-center gap-8 w-full">
-          {step === 0 && (
-            <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 text-slate-800">
-              <MascotDialog
-                message={topic.introMessage || `Chào bạn! Hôm nay chúng ta sẽ học chủ đề '${topic.name}'. Chúng ta sẽ đi qua từng kỹ năng nhé!`}
-                onNext={() => handleNextStep(0, null)}
-              />
-            </div>
-          )}
+        <div className="flex items-center gap-2">
+          {/* Step Navigation Controls */}
+          <div className="flex items-center gap-1 mr-2 border border-white/10 rounded-xl p-1 bg-white/5">
+            <button
+              onClick={handlePrevStep}
+              disabled={step === 0}
+              className="p-1.5 hover:bg-white/10 rounded-lg text-slate-300 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+              title="Bước trước"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span className="text-xs font-semibold px-2 text-slate-300">
+              {step}/{lessons.length}
+            </span>
+            <button
+              onClick={handleNextStepNavigation}
+              disabled={step >= maxAllowedStep}
+              className="p-1.5 hover:bg-white/10 rounded-lg text-slate-300 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+              title="Bước tiếp theo (nếu đã mở khóa)"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
 
-          {currentLesson?.type === 'VOCABULARY' && (
-            <div className="animate-in fade-in duration-500 w-full flex flex-col items-center gap-8">
-              <h2 className="text-2xl font-bold text-slate-200 text-center">{currentLesson.title}</h2>
-              <VocabularyCard
-                word={content.word}
-                pronunciation={content.pronunciation}
-                meaning={content.meaning}
-                example={content.example}
-              />
-              {isShowingPlayback && recordings.length > 0 ? (
-                <RecordingPlayback
-                  audioUrl={recordings[recordings.length - 1].url}
-                  recordings={recordings}
-                  onRetry={handleRetryRecording}
-                  onNext={() => handleNextAfterRecording(step, currentLesson)}
+          <button
+            onClick={handleResetTopic}
+            disabled={isSaving}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-xl text-xs font-semibold transition-all disabled:opacity-50"
+            title="Làm lại từ đầu"
+          >
+            <RotateCcw size={14} className={isSaving ? 'animate-spin' : ''} />
+            <span>Làm lại</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col items-center justify-center p-4 max-w-4xl mx-auto w-full">
+        {isIntroStep && topic && (
+          <div className="animate-in fade-in duration-500 w-full flex flex-col items-center gap-6">
+            <MascotDialog
+              message={topic.introMessage || `Chào mừng bạn đến với chủ đề: ${topic.name}! Chúng ta hãy bắt đầu nhé.`}
+              onNext={() => handleNextStep(step, null, null)}
+              showNextBtn={true}
+            />
+          </div>
+        )}
+
+        {!isIntroStep && !isWinStep && (
+          <div className="w-full flex flex-col items-center gap-8">
+            {currentLesson?.type === 'VOCABULARY' && (
+              <div className="animate-in fade-in duration-500 w-full flex flex-col items-center gap-8 max-w-lg">
+                <h2 className="text-2xl font-bold text-slate-200 text-center">{currentLesson.title}</h2>
+                <VocabularyCard
+                  word={content.word}
+                  pronunciation={content.pronunciation}
+                  meaning={content.meaning}
+                  example={content.example}
+                  onPlayAudio={() => playAudio(content.word)}
                 />
-              ) : (
-                <div className="mt-4 flex flex-col items-center gap-4">
-                  <p className="text-slate-400">
-                    {recordings.length === 0
-                      ? 'Hãy nhấn vào mic và đọc to từ trên'
-                      : `Đã ghi ${recordings.length} lần — nhấn để ghi thêm`}
-                  </p>
-                  <VoiceRecorder onRecordingComplete={handleRecordingComplete} />
-                </div>
-              )}
-            </div>
-          )}
 
-          {currentLesson?.type === 'FILL_BLANK' && (
-            <div className="animate-in fade-in duration-500 w-full flex flex-col items-center gap-8">
-              <h2 className="text-2xl font-bold text-slate-200 text-center">{currentLesson.title}</h2>
-              <FillBlankCard
-                key={currentLesson.id}
-                sentence={content.sentence}
-                answer={content.answer}
-                onComplete={() => handleNextStep(step, currentLesson, null)}
-              />
-            </div>
-          )}
-
-          {currentLesson?.type === 'SHADOWING' && (
-            <div className="animate-in fade-in duration-500 w-full flex flex-col items-center gap-8 max-w-2xl">
-              <h2 className="text-2xl font-bold text-slate-200 text-center">{currentLesson.title}</h2>
-              <div className="bg-slate-700/50 text-slate-200 p-6 rounded-2xl w-full border border-white/10 flex flex-col items-center gap-4 text-center">
-                <p className="text-xl">"{content.audioText}"</p>
-                <button
-                  onClick={() => playAudio(content.audioText)}
-                  className="p-3 bg-blue-500 hover:bg-blue-600 text-white rounded-full transition-colors"
-                >
-                  <Volume2 size={24} />
-                </button>
-                <p className="text-sm text-slate-400">Nghe và cố gắng lặp lại chính xác ngữ điệu</p>
-              </div>
-              {isShowingPlayback && recordings.length > 0 ? (
-                <RecordingPlayback
-                  audioUrl={recordings[recordings.length - 1].url}
-                  recordings={recordings}
-                  onRetry={handleRetryRecording}
-                  onNext={() => handleNextAfterRecording(step, currentLesson)}
-                />
-              ) : (
-                <div className="flex flex-col items-center gap-3">
-                  {recordings.length > 0 && (
-                    <p className="text-sm text-slate-400">
-                      Đã ghi {recordings.length} lần — nhấn để ghi thêm
-                    </p>
-                  )}
-                  <VoiceRecorder onRecordingComplete={handleRecordingComplete} />
-                </div>
-              )}
-            </div>
-          )}
-
-          {currentLesson?.type === 'SITUATION' && (
-            <div className="animate-in fade-in duration-500 w-full flex flex-col items-center gap-8 max-w-2xl">
-              <h2 className="text-2xl font-bold text-slate-200 text-center">{currentLesson.title}</h2>
-              <div className="bg-blue-500/10 text-blue-200 p-6 rounded-2xl w-full border border-blue-500/20">
-                <p className="text-lg">Tình huống: {content.situation}</p>
-              </div>
-              {isShowingPlayback && recordings.length > 0 ? (
-                <RecordingPlayback
-                  audioUrl={recordings[recordings.length - 1].url}
-                  recordings={recordings}
-                  onRetry={handleRetryRecording}
-                  onNext={() => handleNextAfterRecording(step, currentLesson)}
-                />
-              ) : (
-                <div className="flex flex-col items-center gap-3">
-                  {recordings.length > 0 && (
-                    <p className="text-sm text-slate-400">
-                      Đã ghi {recordings.length} lần — nhấn để ghi thêm
-                    </p>
-                  )}
-                  <VoiceRecorder onRecordingComplete={handleRecordingComplete} />
-                </div>
-              )}
-            </div>
-          )}
-
-          {currentLesson?.type === 'CONVERSATION' && (
-            <div className="animate-in fade-in duration-500 w-full flex flex-col items-center gap-8 max-w-2xl text-slate-800">
-              <h2 className="text-2xl font-bold text-slate-200 text-center">{currentLesson.title}</h2>
-              <div className="w-full bg-slate-50 p-6 rounded-3xl border border-slate-200 min-h-[300px]">
-                {content.messages?.map((msg: any, i: number) => (
-                  <ChatBubble key={i} message={msg.text} isAI={msg.isAI} />
-                ))}
-              </div>
-              <VoiceRecorder onRecordingComplete={(_blob, _url) => handleNextStep(step, currentLesson, null)} />
-            </div>
-          )}
-
-          {isWinStep && (
-            <div className="animate-in zoom-in duration-700 w-full flex flex-col items-center gap-4 text-center">
-              <img src="/mascot.jpg" alt="Win" className="w-48 h-48 rounded-full border-8 border-green-500/50 mb-4 object-cover" />
-              <h2 className="text-4xl font-black text-green-400 mb-2">Chúc mừng!</h2>
-              <p className="text-xl text-slate-300">
-                Bạn đã hoàn thành xuất sắc toàn bộ chủ đề với {lessons.length} bài học.
-              </p>
-              
-              {finalScoreData ? (
-                finalScoreData.finalScore !== null ? (
-                  <div className="bg-white/5 p-6 rounded-2xl border border-white/10 mt-4 w-full max-w-sm">
-                     <p className="text-2xl text-yellow-400 font-bold mb-2 flex items-center justify-center gap-2">
-                      🏆 Điểm tổng kết: {finalScoreData.finalScore}/100
-                    </p>
-                    <p className="text-sm text-slate-400">
-                      Tính từ {finalScoreData.scoredLessonsCount}/{finalScoreData.totalLessonsCount} bài học có đánh giá điểm
-                    </p>
-                  </div>
+                {isShowingPlayback && recordings.length > 0 ? (
+                  <RecordingPlayback
+                    audioUrl={recordings[recordings.length - 1].url}
+                    recordings={recordings}
+                    onRetry={handleRetryRecording}
+                    onNext={() => handleNextAfterRecording(step, currentLesson)}
+                  />
                 ) : (
-                  <div className="bg-white/5 p-6 rounded-2xl border border-white/10 mt-4 w-full max-w-sm">
-                    <p className="text-xl text-green-400 font-bold">
-                      ✅ Hoàn thành xuất sắc!
+                  <div className="mt-4 flex flex-col items-center gap-4">
+                    <p className="text-slate-400">
+                      {recordings.length === 0
+                        ? 'Hãy nhấn vào mic và đọc to từ trên'
+                        : `Đã ghi ${recordings.length} lần — nhấn để ghi thêm`}
+                    </p>
+                    <VoiceRecorder onRecordingComplete={handleRecordingComplete} />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {currentLesson?.type === 'FILL_BLANK' && (
+              <div className="animate-in fade-in duration-500 w-full flex flex-col items-center gap-8">
+                <h2 className="text-2xl font-bold text-slate-200 text-center">{currentLesson.title}</h2>
+                <FillBlankCard
+                  key={currentLesson.id}
+                  sentence={content.sentence}
+                  answer={content.answer}
+                  onComplete={() => handleNextStep(step, currentLesson, null)}
+                />
+              </div>
+            )}
+
+            {currentLesson?.type === 'SHADOWING' && (
+              <div className="animate-in fade-in duration-500 w-full flex flex-col items-center gap-8 max-w-2xl">
+                <h2 className="text-2xl font-bold text-slate-200 text-center">{currentLesson.title}</h2>
+                <div className="bg-slate-700/50 text-slate-200 p-6 rounded-2xl w-full border border-white/10 flex flex-col items-center gap-4 text-center">
+                  <p className="text-xl">&ldquo;{content.audioText}&rdquo;</p>
+                  <button
+                    onClick={() => playAudio(content.audioText)}
+                    className="p-3 bg-blue-500 hover:bg-blue-600 text-white rounded-full transition-colors"
+                  >
+                    <Volume2 size={24} />
+                  </button>
+                  <p className="text-sm text-slate-400">Nghe và cố gắng lặp lại chính xác ngữ điệu</p>
+                </div>
+                {isShowingPlayback && recordings.length > 0 ? (
+                  <RecordingPlayback
+                    audioUrl={recordings[recordings.length - 1].url}
+                    recordings={recordings}
+                    onRetry={handleRetryRecording}
+                    onNext={() => handleNextAfterRecording(step, currentLesson)}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center gap-3">
+                    {recordings.length > 0 && (
+                      <p className="text-sm text-slate-400">
+                        Đã ghi {recordings.length} lần — nhấn để ghi thêm
+                      </p>
+                    )}
+                    <VoiceRecorder onRecordingComplete={handleRecordingComplete} />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {currentLesson?.type === 'SITUATION' && (
+              <div className="animate-in fade-in duration-500 w-full flex flex-col items-center gap-8 max-w-2xl">
+                <h2 className="text-2xl font-bold text-slate-200 text-center">{currentLesson.title}</h2>
+                <div className="bg-blue-500/10 text-blue-200 p-6 rounded-2xl w-full border border-blue-500/20 shadow-lg">
+                  <p className="text-lg leading-relaxed">
+                    <strong className="text-blue-400 font-semibold">Tình huống:</strong> {content.situation}
+                  </p>
+                </div>
+
+                {isEvaluatingSituation ? (
+                  <div className="p-8 rounded-3xl bg-surface-800/80 border border-white/10 flex flex-col items-center justify-center gap-3 w-full animate-fadeIn">
+                    <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+                    <p className="text-slate-300 font-medium text-sm">
+                      AI đang phân tích câu trả lời của bạn theo tình huống...
                     </p>
                   </div>
-                )
-              ) : (
-                <Loader2 size={32} className="animate-spin text-blue-500 mt-4" />
-              )}
-
-              <div className="flex gap-4 mt-8">
-                <button
-                  onClick={handleResetTopic}
-                  disabled={isSaving}
-                  className="px-8 py-4 bg-slate-700 text-white rounded-full font-bold shadow-lg hover:bg-slate-600 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 disabled:opacity-50"
-                >
-                  <RotateCcw size={20} /> Học lại từ đầu
-                </button>
-                <button
-                  onClick={() => router.push(`/courses/${courseId}`)}
-                  className="px-8 py-4 bg-blue-500 text-white rounded-full font-bold shadow-lg hover:bg-blue-600 transition-all hover:scale-105 active:scale-95"
-                >
-                  Quay lại danh sách
-                </button>
+                ) : currentSituationEval ? (
+                  <SituationEvaluationCard
+                    result={currentSituationEval}
+                    onRetry={handleRetrySituation}
+                    onNext={() => {
+                      const finalScore = currentSituationEval.score ?? null;
+                      handleNextStep(step, currentLesson, finalScore);
+                    }}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center gap-4">
+                    <p className="text-slate-400 text-sm">
+                      Hãy bấm mic và nói câu trả lời của bạn cho tình huống trên
+                    </p>
+                    <VoiceRecorder
+                      onRecordingComplete={(blob, url, transcript) =>
+                        handleSituationRecordingComplete(blob, url, transcript, content.situation)
+                      }
+                    />
+                  </div>
+                )}
               </div>
-            </div>
-          )}
-        </div>
+            )}
 
-        {/* Mobile Navigation Bar (visible only on small screens) */}
-        <div className="flex sm:hidden justify-between items-center w-full mt-8 pt-4 border-t border-slate-700/50">
-          <button
-            onClick={handlePrevStep}
-            disabled={step === 0}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-slate-300 hover:bg-slate-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            <ChevronLeft size={20} /> Quay lại
-          </button>
-          
-          <button
-            onClick={handleNextStepNavigation}
-            disabled={step >= maxAllowedStep || step >= totalSteps - 1}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-slate-300 hover:bg-slate-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            Tiến tới <ChevronRight size={20} />
-          </button>
-        </div>
-        </div>
+            {currentLesson?.type === 'CONVERSATION' && (
+              <div className="animate-in fade-in duration-500 w-full flex flex-col items-center gap-8 max-w-2xl text-slate-800">
+                <h2 className="text-2xl font-bold text-slate-200 text-center">{currentLesson.title}</h2>
+                <div className="w-full bg-slate-50 p-6 rounded-3xl border border-slate-200 min-h-[300px]">
+                  {content.messages?.map((msg: any, i: number) => (
+                    <ChatBubble key={i} message={msg.text} isAI={msg.isAI} />
+                  ))}
+                </div>
+                <VoiceRecorder onRecordingComplete={(_blob, _url) => handleNextStep(step, currentLesson, null)} />
+              </div>
+            )}
+          </div>
+        )}
+
+        {isWinStep && (
+          <div className="animate-in zoom-in duration-700 w-full flex flex-col items-center gap-4 text-center">
+            <img src="/mascot.jpg" alt="Win" className="w-48 h-48 rounded-full border-8 border-green-500/50 mb-4 object-cover" />
+            <h2 className="text-4xl font-black text-green-400 mb-2">Chúc mừng!</h2>
+            <p className="text-xl text-slate-300">
+              Bạn đã hoàn thành xuất sắc toàn bộ chủ đề với {lessons.length} bài học.
+            </p>
+            
+            {finalScoreData ? (
+              finalScoreData.finalScore !== null ? (
+                <div className="bg-white/5 p-6 rounded-2xl border border-white/10 mt-4 w-full max-w-sm">
+                   <p className="text-2xl text-yellow-400 font-bold mb-2 flex items-center justify-center gap-2">
+                    🏆 Điểm tổng kết: {finalScoreData.finalScore}/100
+                  </p>
+                  <p className="text-sm text-slate-400">
+                    Tính từ {finalScoreData.scoredLessonsCount}/{finalScoreData.totalLessonsCount} bài học có đánh giá điểm
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-white/5 p-6 rounded-2xl border border-white/10 mt-4 w-full max-w-sm">
+                  <p className="text-xl text-green-400 font-bold">
+                    ✅ Hoàn thành xuất sắc!
+                  </p>
+                </div>
+              )
+            ) : (
+              <Loader2 size={32} className="animate-spin text-blue-500 mt-4" />
+            )}
+
+            <button
+              onClick={() => router.push(`/courses/${courseId}`)}
+              className="mt-6 px-8 py-3.5 bg-green-500 hover:bg-green-600 text-white font-bold rounded-2xl shadow-lg shadow-green-500/30 transition-all text-lg hover:scale-105"
+            >
+              Về trang khóa học
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
 };
+
+export default TopicLearningPage;

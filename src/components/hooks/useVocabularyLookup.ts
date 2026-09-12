@@ -62,7 +62,7 @@ export function useVocabularyLookup({
       const row = rows.find((r) => r.id === rowId);
       if (!row) return;
 
-      const fieldsToFill: (keyof VocabularyLookupResult)[] = [
+      const fieldsToFill: (keyof Omit<FlashcardRow, 'id'>)[] = [
         'word',
         'partOfSpeech',
         'pronunciation',
@@ -73,9 +73,10 @@ export function useVocabularyLookup({
       for (const field of fieldsToFill) {
         // Skip the field the user typed in
         if (field === sourceField) continue;
-        // Only fill if the current value is empty
-        if (!row[field]?.trim() && result[field]?.trim()) {
-          updateField(rowId, field, result[field].trim());
+        const val = result[field];
+        // Only fill if the current value is empty and result has string value
+        if (!row[field]?.trim() && typeof val === 'string' && val.trim()) {
+          updateField(rowId, field, val.trim());
         }
       }
     },
