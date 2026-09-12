@@ -11,6 +11,7 @@ import {
   Eye,
   Edit2,
   Trash2,
+  Plus,
 } from 'lucide-react';
 import { courseService, Course, Topic } from '@/services/courseService';
 import { Pagination } from '@/components/shared/Pagination';
@@ -103,6 +104,13 @@ export default function AdminTopicsPage() {
           >
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
+
+          <Link
+            href={`/admin/topics/new${selectedCourseId !== 'ALL' ? `?courseId=${selectedCourseId}` : ''}`}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-white bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 shadow-lg shadow-blue-500/20 transition-all text-sm"
+          >
+            <Plus size={16} /> Thêm Chủ đề
+          </Link>
         </div>
       </div>
 

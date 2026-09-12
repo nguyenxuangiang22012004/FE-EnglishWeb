@@ -5,6 +5,7 @@ import { Provider } from 'react-redux';
 import store from '@/store/index';
 import AuthGuard from '@/components/auth/AuthGuard';
 import { GoogleOAuthProvider } from '@react-oauth/google';
+import QuickLookupWidget from '@/components/shared/QuickLookupWidget';
 
 interface ProvidersProps {
     children: React.ReactNode;
@@ -16,7 +17,11 @@ export function Providers({ children }: ProvidersProps) {
     return (
         <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
             <Provider store={store}>
-                <AuthGuard>{children}</AuthGuard>
+                <AuthGuard>
+                    {children}
+                    {/* Widget tra từ vựng nhanh có mặt ở mọi màn hình */}
+                    <QuickLookupWidget />
+                </AuthGuard>
             </Provider>
         </GoogleOAuthProvider>
     );

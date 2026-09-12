@@ -1,14 +1,14 @@
-'use client';
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { FileText, Save, Plus, Trash2, HelpCircle } from 'lucide-react';
-import { Lesson, LessonType, CreateLessonPayload } from '@/services/courseService';
+import { FileText, Save, Plus, Trash2, HelpCircle, Layers } from 'lucide-react';
+import { Lesson, LessonType, CreateLessonPayload, Topic, courseService } from '@/services/courseService';
 
 interface LessonFormProps {
   mode: 'create' | 'edit';
   initialData?: Lesson | null;
-  onSubmit: (data: CreateLessonPayload) => void;
+  initialTopicId?: string;
+  topicsList?: Topic[];
+  onSubmit: (data: CreateLessonPayload, topicId?: string) => void;
   isSubmitting?: boolean;
   backHref: string;
 }
@@ -16,13 +16,29 @@ interface LessonFormProps {
 export const LessonForm: React.FC<LessonFormProps> = ({
   mode,
   initialData,
+  initialTopicId,
+  topicsList,
   onSubmit,
   isSubmitting = false,
   backHref,
 }) => {
+  const [topics, setTopics] = useState<Topic[]>(topicsList || []);
+  const [topicId, setTopicId] = useState<string>(initialTopicId || initialData?.topicId || '');
   const [title, setTitle] = useState(initialData?.title || '');
   const [type, setType] = useState<LessonType>(initialData?.type || 'VOCABULARY');
   const [orderIndex, setOrderIndex] = useState(initialData?.orderIndex ?? 0);
+
+  useEffect(() => {
+    if (mode === 'create' && (!topics || topics.length === 0)) {
+      courseService.getAllTopics().then((res) => {
+        const list = Array.isArray(res) ? res : (res as any)?.content || [];
+        setTopics(list);
+        if (!topicId && list.length > 0) {
+          setTopicId(list[0].id);
+        }
+      }).catch(console.error);
+    }
+  }, [mode]);
 
   // Parse initial content JSON
   const parseContent = () => {
@@ -79,6 +95,10 @@ export const LessonForm: React.FC<LessonFormProps> = ({
       alert('Vui lòng nhập tiêu đề bài làm');
       return;
     }
+    if (mode === 'create' && !topicId) {
+      alert('Vui lòng chọn chủ đề trực thuộc cho bài làm');
+      return;
+    }
 
     let contentObj: any = {};
     switch (type) {
@@ -104,12 +124,15 @@ export const LessonForm: React.FC<LessonFormProps> = ({
         break;
     }
 
-    onSubmit({
-      title: title.trim(),
-      type,
-      orderIndex: Number(orderIndex) || 0,
-      contentJson: JSON.stringify(contentObj),
-    });
+    onSubmit(
+      {
+        title: title.trim(),
+        type,
+        orderIndex: Number(orderIndex) || 0,
+        contentJson: JSON.stringify(contentObj),
+      },
+      topicId
+    );
   };
 
   const lessonTypes = [
@@ -130,6 +153,35 @@ export const LessonForm: React.FC<LessonFormProps> = ({
             {mode === 'create' ? 'Thông tin Bài làm mới' : 'Chỉnh sửa thông tin Bài làm'}
           </h2>
         </div>
+
+        {/* Topic Selector in Create Mode */}
+        {mode === 'create' && (
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+              <Layers size={16} className="text-emerald-400" />
+              Chủ đề trực thuộc *
+            </label>
+            {topics.length === 0 ? (
+              <div className="text-sm text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
+                Đang tải danh sách chủ đề hoặc chưa có chủ đề nào. Vui lòng tạo chủ đề trước.
+              </div>
+            ) : (
+              <select
+                value={topicId}
+                onChange={(e) => setTopicId(e.target.value)}
+                required
+                className="w-full bg-surface-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition-colors"
+              >
+                <option value="" disabled>-- Chọn chủ đề --</option>
+                {topics.map((t) => (
+                  <option key={t.id} value={t.id} className="bg-surface-900 text-white">
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+        )}
 
         {/* Title + Order */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">

@@ -165,8 +165,11 @@ export const courseService = {
 
   // ─── Lessons ────────────────────────────────────────────────────────────────
 
-  getAllLessons: async (): Promise<Lesson[]> => {
-    const res = await axios.get('/courses/lessons');
+  getAllLessons: async (topicId?: string, type?: string): Promise<Lesson[]> => {
+    const params: Record<string, string> = {};
+    if (topicId && topicId !== 'ALL') params.topicId = topicId;
+    if (type && type !== 'ALL') params.type = type;
+    const res = await axios.get('/courses/lessons', { params });
     return res.data?.data || res.data;
   },
 
@@ -175,8 +178,10 @@ export const courseService = {
     return res.data?.data || res.data;
   },
 
-  getLessonsByTopic: async (topicId: string): Promise<Lesson[]> => {
-    const res = await axios.get(`/courses/topics/${topicId}/lessons`);
+  getLessonsByTopic: async (topicId: string, type?: string): Promise<Lesson[]> => {
+    const params: Record<string, string> = {};
+    if (type && type !== 'ALL') params.type = type;
+    const res = await axios.get(`/courses/topics/${topicId}/lessons`, { params });
     return res.data?.data || res.data;
   },
 

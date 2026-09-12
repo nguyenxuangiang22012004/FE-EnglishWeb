@@ -1,15 +1,17 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Layers, Save } from 'lucide-react';
-import { Topic, CreateTopicPayload } from '@/services/courseService';
+import { Layers, Save, BookOpen } from 'lucide-react';
+import { Topic, Course, CreateTopicPayload, courseService } from '@/services/courseService';
 import { CloudinaryImageUpload } from '@/components/admin/common/CloudinaryImageUpload';
 
 interface TopicFormProps {
   mode: 'create' | 'edit';
   initialData?: Topic | null;
-  onSubmit: (data: CreateTopicPayload) => void;
+  initialCourseId?: string;
+  coursesList?: Course[];
+  onSubmit: (data: CreateTopicPayload, courseId?: string) => void;
   isSubmitting?: boolean;
   backHref: string;
 }
@@ -17,15 +19,31 @@ interface TopicFormProps {
 export const TopicForm: React.FC<TopicFormProps> = ({
   mode,
   initialData,
+  initialCourseId,
+  coursesList,
   onSubmit,
   isSubmitting = false,
   backHref,
 }) => {
+  const [courses, setCourses] = useState<Course[]>(coursesList || []);
+  const [courseId, setCourseId] = useState<string>(initialCourseId || initialData?.courseId || '');
   const [name, setName] = useState(initialData?.name || '');
   const [description, setDescription] = useState(initialData?.description || '');
   const [orderIndex, setOrderIndex] = useState(initialData?.orderIndex ?? 0);
   const [mascotImageUrl, setMascotImageUrl] = useState(initialData?.mascotImageUrl || '/mascot.jpg');
   const [introMessage, setIntroMessage] = useState(initialData?.introMessage || '');
+
+  useEffect(() => {
+    if (mode === 'create' && (!courses || courses.length === 0)) {
+      courseService.getCourses(0, 100).then((res) => {
+        const list = res.content || [];
+        setCourses(list);
+        if (!courseId && list.length > 0) {
+          setCourseId(list[0].id);
+        }
+      });
+    }
+  }, [mode]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,13 +51,20 @@ export const TopicForm: React.FC<TopicFormProps> = ({
       alert('Vui lòng nhập tên chủ đề');
       return;
     }
-    onSubmit({
-      name: name.trim(),
-      description: description.trim(),
-      orderIndex: Number(orderIndex) || 0,
-      mascotImageUrl: mascotImageUrl.trim(),
-      introMessage: introMessage.trim(),
-    });
+    if (mode === 'create' && !courseId) {
+      alert('Vui lòng chọn khóa học trực thuộc cho chủ đề');
+      return;
+    }
+    onSubmit(
+      {
+        name: name.trim(),
+        description: description.trim(),
+        orderIndex: Number(orderIndex) || 0,
+        mascotImageUrl: mascotImageUrl.trim(),
+        introMessage: introMessage.trim(),
+      },
+      courseId
+    );
   };
 
   return (
@@ -51,6 +76,32 @@ export const TopicForm: React.FC<TopicFormProps> = ({
           {mode === 'create' ? 'Thông tin Chủ đề mới' : 'Chỉnh sửa thông tin Chủ đề'}
         </h2>
       </div>
+
+      {/* Thuộc khóa học (nếu đang tạo mới) */}
+      {mode === 'create' && (
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-slate-200 flex items-center gap-1.5">
+            <BookOpen size={16} className="text-red-400" />
+            Khóa học trực thuộc *
+          </label>
+          <select
+            value={courseId}
+            onChange={(e) => setCourseId(e.target.value)}
+            required
+            className="w-full bg-surface-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors cursor-pointer"
+          >
+            {courses.length === 0 ? (
+              <option value="">Đang tải danh sách khóa học...</option>
+            ) : (
+              courses.map((c) => (
+                <option key={c.id} value={c.id} className="bg-surface-900 text-white">
+                  {c.name} ({c.level || 'All Levels'})
+                </option>
+              ))
+            )}
+          </select>
+        </div>
+      )}
 
       {/* Tên chủ đề */}
       <div className="space-y-2">

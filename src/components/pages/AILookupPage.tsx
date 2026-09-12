@@ -2,7 +2,11 @@
 
 import React, { useEffect, useState } from 'react';
 import { AILookupBox } from '@/components/ui/AILookupBox';
-import { lookupEnglishWord, VocabularyLookupResult } from '@/services/vocabularyLookupService';
+import {
+    lookupEnglishWord,
+    searchDictionarySuggestions,
+    VocabularyLookupResult
+} from '@/services/vocabularyLookupService';
 import { lookupHistoryService, AiLookupHistoryResponse } from '@/services/lookupHistoryService';
 import { message } from 'antd';
 import { DeckSelectModal } from '@/components/ui/DeckSelectModal';
@@ -20,7 +24,9 @@ export const AILookupPage: React.FC = () => {
     const fetchRecentHistory = async () => {
         try {
             const data = await lookupHistoryService.getRecentHistory();
-            setRecentSearches(data);
+            if (Array.isArray(data)) {
+                setRecentSearches(data);
+            }
         } catch (error) {
             console.error('Error fetching recent history:', error);
         }
@@ -32,12 +38,14 @@ export const AILookupPage: React.FC = () => {
         try {
             const data = await lookupEnglishWord(word);
             setResult(data);
-            
-            // Save to history
-            await lookupHistoryService.saveHistory(data);
-            
-            // Refresh history
-            fetchRecentHistory();
+
+            // Save to history backend
+            try {
+                await lookupHistoryService.saveHistory(data);
+                fetchRecentHistory();
+            } catch {
+                // Ignore history save error
+            }
         } catch (error: any) {
             message.error(error.message || 'Lỗi khi tra cứu từ vựng.');
             setResult(undefined);
@@ -47,23 +55,8 @@ export const AILookupPage: React.FC = () => {
     };
 
     const handleRecentClick = (historyItem: AiLookupHistoryResponse) => {
-        setResult({
-            word: historyItem.word,
-            partOfSpeech: historyItem.partOfSpeech,
-            pronunciation: historyItem.pronunciation,
-            meaning: historyItem.meaning,
-            example: historyItem.example
-        });
+        handleSearch(historyItem.word);
     };
-
-    // Adapt VocabularyLookupResult to what AILookupBox expects
-    const adaptedResult = result ? {
-        word: result.word,
-        meaning: result.meaning,
-        pronunciation: result.pronunciation,
-        wordType: result.partOfSpeech,
-        examples: result.example ? [result.example] : []
-    } : undefined;
 
     const handleAddFlashcard = () => {
         if (result) {
@@ -81,53 +74,75 @@ export const AILookupPage: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-display font-bold text-slate-100">🤖 Tra Cứu AI Từ Vựng</h1>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                    <AILookupBox 
-                        onSearch={handleSearch} 
-                        isLoading={isLoading} 
-                        result={adaptedResult} 
-                        onAddFlashcard={handleAddFlashcard}
-                    />
-                </div>
-
-                {/* Tips */}
-                <div className="glass-card p-6 border border-accent-indigo/20 bg-gradient-to-br from-accent-indigo/5 to-transparent h-fit">
-                    <h3 className="text-lg font-display font-bold text-accent-indigo-light mb-4">💡 Mẹo sử dụng</h3>
-                    <ul className="space-y-2.5 text-sm text-slate-300">
-                        <li className="flex items-start gap-2"><span className="text-accent-emerald mt-0.5">✦</span> Gõ từ tiếng Anh cần tra cứu</li>
-                        <li className="flex items-start gap-2"><span className="text-accent-emerald mt-0.5">✦</span> AI sẽ cung cấp định nghĩa, ví dụ</li>
-                        <li className="flex items-start gap-2"><span className="text-accent-emerald mt-0.5">✦</span> Nhấn &quot;Thêm vào Flashcard&quot; để lưu</li>
-                        <li className="flex items-start gap-2"><span className="text-accent-emerald mt-0.5">✦</span> Từ sẽ được thêm vào collection hiện tại</li>
-                    </ul>
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-display font-bold text-slate-100 flex items-center gap-2.5">
+                        <span>📖</span> Tra Cứu Từ Vựng Quốc Tế
+                    </h1>
+                    <p className="text-sm text-slate-400 mt-1">
+                        Hệ thống từ điển quốc tế FreeDictionaryAPI & Dịch nghĩa tiếng Việt thông minh
+                    </p>
                 </div>
             </div>
 
-            {/* Recent Searches */}
-            {recentSearches.length > 0 && (
-                <div className="glass-card p-6">
-                    <h3 className="text-lg font-display font-bold text-slate-200 mb-4">🕐 Tìm kiếm gần đây</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        {recentSearches.map((historyItem) => (
-                            <button
-                                key={historyItem.id}
-                                onClick={() => handleRecentClick(historyItem)}
-                                className="p-3 bg-white/[0.04] border border-white/[0.06] rounded-xl hover:bg-white/[0.08] hover:border-accent-indigo/20 text-slate-300 font-medium transition-all text-sm"
-                            >
-                                {historyItem.word}
-                            </button>
-                        ))}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Main Column */}
+                <div className="lg:col-span-2">
+                    <AILookupBox
+                        onSearchWord={handleSearch}
+                        onFetchSuggestions={searchDictionarySuggestions}
+                        isLoadingDetails={isLoading}
+                        result={result}
+                        onAddFlashcard={handleAddFlashcard}
+                        onClearResult={() => setResult(undefined)}
+                    />
+                </div>
+
+                {/* Sidebar Column: Recent Searches */}
+                <div>
+                    <div className="glass-card p-6 border border-white/5 bg-surface-800/80">
+                        <h3 className="text-base font-display font-bold text-slate-200 mb-4 flex items-center justify-between">
+                            <span>🕐 Tìm kiếm gần đây</span>
+                            <span className="text-xs text-slate-400 font-normal">{recentSearches.length} từ</span>
+                        </h3>
+                        {recentSearches.length > 0 ? (
+                            <div className="space-y-2 max-h-[600px] overflow-y-auto custom-scrollbar pr-1">
+                                {recentSearches.map((historyItem) => (
+                                    <button
+                                        key={historyItem.id}
+                                        onClick={() => handleRecentClick(historyItem)}
+                                        className="w-full flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-accent-indigo/10 hover:border-accent-indigo/30 transition-all text-left group"
+                                    >
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-sm font-bold text-accent-indigo-light group-hover:text-accent-indigo">
+                                                {historyItem.word}
+                                            </span>
+                                            {historyItem.pronunciation && (
+                                                <span className="text-xs text-slate-400 font-mono">
+                                                    {historyItem.pronunciation}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <span className="text-xs text-slate-400 truncate max-w-[120px]">
+                                            {historyItem.meaning}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-slate-400 italic">Chưa có lịch sử tra từ.</p>
+                        )}
                     </div>
                 </div>
-            )}
+            </div>
 
             <DeckSelectModal
                 isOpen={isDeckModalOpen}
                 onClose={() => setIsDeckModalOpen(false)}
                 cards={cardsPayload}
-                onSuccess={() => {}}
+                onSuccess={() => {
+                    message.success('Đã lưu từ vựng vào bộ thẻ!');
+                }}
                 redirectOnSuccess={false}
             />
         </div>

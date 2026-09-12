@@ -1,16 +1,27 @@
 /**
- * Vocabulary lookup via Gemini AI.
- * Supports both English → Vietnamese and Vietnamese → English lookups.
+ * Vocabulary lookup using FreeDictionaryAPI.com & Datamuse API
  */
 
-import { callGeminiJSON } from './geminiHelpers';
+import {
+    lookupWordFromFreeDictionaryAPI,
+    getWordSuggestions,
+    DetailedLookupResult,
+    FreeDictSuggestion,
+    FreeDictEntryItem,
+    FreeDictPronunciation
+} from './freeDictionaryService';
+import { callGeminiJSON, getGeminiKey } from './geminiHelpers';
 
 export interface VocabularyLookupResult {
-  word: string;
-  partOfSpeech: string;
-  pronunciation: string;
-  meaning: string;
-  example: string;
+    word: string;
+    partOfSpeech: string;
+    pronunciation: string;
+    meaning: string;
+    example: string;
+    pronunciationsList?: FreeDictPronunciation[];
+    entries?: FreeDictEntryItem[];
+    synonyms?: string[];
+    antonyms?: string[];
 }
 
 const ENGLISH_LOOKUP_PROMPT = (word: string) => `You are an English-Vietnamese dictionary expert.
@@ -19,7 +30,7 @@ Given the English word: "${word}"
 
 Return a JSON object with:
 - "word": the original English word (cleaned up if needed)
-- "partOfSpeech": part of speech in English abbreviation (e.g. "adj", "n", "v", "adv", "prep", "conj")
+- "partOfSpeech": part of speech in English abbreviation (e.g. "adj", "n", "v", "adv", "prep", "conj", "int")
 - "pronunciation": IPA phonetic transcription (e.g. "/rɪˈzɪliənt/")
 - "meaning": Vietnamese translation/meaning (concise, 1-3 words)
 - "example": one natural English example sentence using the word
@@ -32,7 +43,7 @@ Given the Vietnamese meaning: "${meaning}"
 
 Find the most common/appropriate English word for this meaning and return a JSON object with:
 - "word": the English word
-- "partOfSpeech": part of speech in English abbreviation (e.g. "adj", "n", "v", "adv", "prep", "conj")
+- "partOfSpeech": part of speech in English abbreviation (e.g. "adj", "n", "v", "adv", "prep", "conj", "int")
 - "pronunciation": IPA phonetic transcription (e.g. "/rɪˈzɪliənt/")
 - "meaning": the original Vietnamese meaning (cleaned up if needed)
 - "example": one natural English example sentence using the word
@@ -40,33 +51,77 @@ Find the most common/appropriate English word for this meaning and return a JSON
 Respond ONLY with a valid JSON object. No markdown, no code fences, no extra text.`;
 
 /**
- * Lookup an English word → returns full vocabulary info including Vietnamese meaning.
+ * Autocomplete suggestions for any English word via Datamuse API (Unlimited words)
  */
-export async function lookupEnglishWord(
-  word: string,
-  signal?: AbortSignal,
-): Promise<VocabularyLookupResult> {
-  const trimmed = word.trim();
-  if (!trimmed) throw new Error('Từ tiếng Anh không được để trống.');
-
-  return callGeminiJSON<VocabularyLookupResult>(
-    ENGLISH_LOOKUP_PROMPT(trimmed),
-    signal,
-  );
+export async function searchDictionarySuggestions(query: string, limit: number = 8): Promise<FreeDictSuggestion[]> {
+    return getWordSuggestions(query, limit);
 }
 
 /**
- * Lookup a Vietnamese meaning → returns the matching English word and full info.
+ * Lookup an English word → returns full vocabulary info via FreeDictionaryAPI.com
+ */
+export async function lookupEnglishWord(
+    word: string,
+    signal?: AbortSignal,
+): Promise<VocabularyLookupResult> {
+    const trimmed = word.trim();
+    if (!trimmed) throw new Error('Từ tiếng Anh không được để trống.');
+
+    // 1. Dùng FreeDictionaryAPI.com
+    try {
+        const entry: DetailedLookupResult = await lookupWordFromFreeDictionaryAPI(trimmed);
+        if (entry) {
+            return {
+                word: entry.word,
+                partOfSpeech: entry.primaryPos.replace('.', ''),
+                pronunciation: entry.primaryPronunciation,
+                meaning: entry.vietnameseMeaning,
+                example: entry.primaryExample || `Example sentence for "${entry.word}".`,
+                pronunciationsList: entry.pronunciationsList,
+                entries: entry.entries,
+                synonyms: entry.allSynonyms,
+                antonyms: entry.allAntonyms,
+            };
+        }
+    } catch (apiErr) {
+        console.warn('FreeDictionaryAPI.com failed, trying fallback:', apiErr);
+    }
+
+    // 2. Fallback to Gemini AI if key exists
+    const geminiKey = getGeminiKey();
+    if (geminiKey) {
+        try {
+            return await callGeminiJSON<VocabularyLookupResult>(
+                ENGLISH_LOOKUP_PROMPT(trimmed),
+                signal,
+            );
+        } catch (geminiError) {
+            console.warn('Gemini lookup fallback error:', geminiError);
+        }
+    }
+
+    // 3. Last fallback
+    return {
+        word: trimmed,
+        partOfSpeech: 'n',
+        pronunciation: `/${trimmed.toLowerCase()}/`,
+        meaning: `Từ vựng "${trimmed}"`,
+        example: `Example with "${trimmed}".`,
+    };
+}
+
+/**
+ * Lookup a Vietnamese meaning → returns the matching English word
  */
 export async function lookupVietnameseMeaning(
-  meaning: string,
-  signal?: AbortSignal,
+    meaning: string,
+    signal?: AbortSignal,
 ): Promise<VocabularyLookupResult> {
-  const trimmed = meaning.trim();
-  if (!trimmed) throw new Error('Nghĩa tiếng Việt không được để trống.');
+    const trimmed = meaning.trim();
+    if (!trimmed) throw new Error('Nghĩa tiếng Việt không được để trống.');
 
-  return callGeminiJSON<VocabularyLookupResult>(
-    VIETNAMESE_LOOKUP_PROMPT(trimmed),
-    signal,
-  );
+    return callGeminiJSON<VocabularyLookupResult>(
+        VIETNAMESE_LOOKUP_PROMPT(trimmed),
+        signal,
+    );
 }

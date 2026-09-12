@@ -11,6 +11,7 @@ import {
   Eye,
   Edit2,
   Trash2,
+  Plus,
 } from 'lucide-react';
 import { courseService, Topic, Lesson, LessonType } from '@/services/courseService';
 import { Pagination } from '@/components/shared/Pagination';
@@ -34,6 +35,7 @@ function AdminLessonsContent() {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [selectedTopicId, setSelectedTopicId] = useState<string>(initialTopicId);
+  const [selectedType, setSelectedType] = useState<string>('ALL');
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(false);
 
@@ -59,9 +61,16 @@ function AdminLessonsContent() {
     loadData();
   }, []);
 
-  const filteredLessons = selectedTopicId === 'ALL'
-    ? lessons
-    : lessons.filter((l: any) => l.topicId === selectedTopicId || l.topic?.id === selectedTopicId);
+  const filteredLessons = lessons.filter((l: any) => {
+    const matchTopic =
+      selectedTopicId === 'ALL' ||
+      l.topicId === selectedTopicId ||
+      l.topic?.id === selectedTopicId;
+    const matchType =
+      selectedType === 'ALL' ||
+      l.type?.toUpperCase() === selectedType.toUpperCase();
+    return matchTopic && matchType;
+  });
 
   const totalPages = Math.ceil(filteredLessons.length / PAGE_SIZE) || 1;
   const paginatedLessons = filteredLessons.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -101,7 +110,7 @@ function AdminLessonsContent() {
                 setSelectedTopicId(e.target.value);
                 setPage(0);
               }}
-              className="bg-transparent text-xs text-white focus:outline-none cursor-pointer max-w-[200px] truncate"
+              className="bg-transparent text-xs text-white focus:outline-none cursor-pointer max-w-[180px] truncate"
             >
               <option value="ALL" className="bg-surface-900 text-white">Tất cả chủ đề</option>
               {topics.map((t) => (
@@ -112,12 +121,42 @@ function AdminLessonsContent() {
             </select>
           </div>
 
+          {/* Lesson Type filter */}
+          <div className="flex items-center gap-2 bg-surface-800 border border-white/10 px-3 py-1.5 rounded-xl">
+            <Filter size={14} className="text-slate-400" />
+            <span className="text-xs text-slate-400 font-medium hidden sm:inline">Loại bài:</span>
+            <select
+              value={selectedType}
+              onChange={(e) => {
+                setSelectedType(e.target.value);
+                setPage(0);
+              }}
+              className="bg-transparent text-xs text-white focus:outline-none cursor-pointer max-w-[180px] truncate"
+            >
+              <option value="ALL" className="bg-surface-900 text-white">Tất cả loại bài</option>
+              <option value="VOCABULARY" className="bg-surface-900 text-white">Từ vựng (VOCABULARY)</option>
+              <option value="FILL_BLANK" className="bg-surface-900 text-white">Điền từ (FILL_BLANK)</option>
+              <option value="SHADOWING" className="bg-surface-900 text-white">Shadowing (SHADOWING)</option>
+              <option value="SITUATION" className="bg-surface-900 text-white">Tình huống (SITUATION)</option>
+              <option value="CONVERSATION" className="bg-surface-900 text-white">Hội thoại (CONVERSATION)</option>
+            </select>
+          </div>
+
           <button
             onClick={loadData}
             className="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/[0.08] text-slate-400 hover:text-white transition-all text-sm"
+            title="Tải lại dữ liệu"
           >
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           </button>
+
+          <Link
+            href={selectedTopicId !== 'ALL' ? `/admin/lessons/new?topicId=${selectedTopicId}` : '/admin/lessons/new'}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-medium rounded-xl shadow-lg shadow-emerald-500/20 text-sm transition-all"
+          >
+            <Plus size={16} />
+            <span>Thêm Bài làm</span>
+          </Link>
         </div>
       </div>
 
