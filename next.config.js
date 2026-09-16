@@ -13,6 +13,14 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['antd', '@ant-design/icons', 'lucide-react'],
   },
+  async rewrites() {
+    return [
+      {
+        source: '/api/v1/:path*',
+        destination: 'http://localhost:8080/api/v1/:path*',
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;

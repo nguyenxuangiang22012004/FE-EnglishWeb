@@ -5,6 +5,10 @@ import { logout } from '@/store/slices/authSlice';
 const instance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
   timeout: 10000,
+  headers: {
+    'ngrok-skip-browser-warning': 'true',
+    'Bypass-Tunnel-Reminder': 'true',
+  },
 });
 
 // Request interceptor
@@ -81,6 +85,11 @@ instance.interceptors.response.use(
       try {
         const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`, {
           refreshToken: refreshToken,
+        }, {
+          headers: {
+            'ngrok-skip-browser-warning': 'true',
+            'Bypass-Tunnel-Reminder': 'true',
+          }
         });
         
         if (res.data?.success && res.data?.data?.accessToken) {

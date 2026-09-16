@@ -266,21 +266,14 @@ export const QuickLookupModal: React.FC<QuickLookupModalProps> = ({ isOpen, onCl
                                             )}
                                         </div>
 
-                                        {/* Pronunciations list */}
-                                        <div className="flex items-center gap-2 flex-wrap text-sm">
-                                            <span className="text-slate-400 font-mono">
-                                                {selectedResult.pronunciation}
-                                            </span>
-                                            {selectedResult.pronunciationsList && selectedResult.pronunciationsList.length > 1 && (
-                                                <div className="flex gap-1.5 flex-wrap">
-                                                    {selectedResult.pronunciationsList.slice(1, 3).map((p, idx) => (
-                                                        <span key={idx} className="text-xs text-slate-400 font-mono bg-white/[0.04] px-2 py-0.5 rounded">
-                                                            {p.text} {p.tags?.[0] ? `(${p.tags[0]})` : ''}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
+                                        {/* Pronunciation */}
+                                        {selectedResult.pronunciation && (
+                                            <div className="flex items-center gap-2 flex-wrap text-sm">
+                                                <span className="text-slate-400 font-mono">
+                                                    {selectedResult.pronunciation}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <button

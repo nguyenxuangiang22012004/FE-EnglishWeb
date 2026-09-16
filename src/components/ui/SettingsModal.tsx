@@ -3,29 +3,12 @@ import { createPortal } from 'react-dom';
 import { X, Save, AlertCircle } from 'lucide-react';
 
 export const AI_MODELS = [
-    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
-    { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
+    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Khuyên dùng)' },
+    { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro (Cao cấp)' },
     { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
-    { id: 'gemini-2.0-flash-001', name: 'Gemini 2.0 Flash 001' },
-    { id: 'gemini-2.0-flash-lite-001', name: 'Gemini 2.0 Flash-Lite 001' },
-    { id: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash-Lite' },
-    { id: 'gemini-2.5-flash-preview-tts', name: 'Gemini 2.5 Flash Preview TTS' },
-    { id: 'gemini-2.5-pro-preview-tts', name: 'Gemini 2.5 Pro Preview TTS' },
-    { id: 'gemma-4-26b-a4b-it', name: 'Gemma 4 26B A4B IT' },
-    { id: 'gemma-4-31b-it', name: 'Gemma 4 31B IT' },
-    { id: 'gemini-flash-latest', name: 'Gemini Flash Latest' },
-    { id: 'gemini-flash-lite-latest', name: 'Gemini Flash-Lite Latest' },
-    { id: 'gemini-pro-latest', name: 'Gemini Pro Latest' },
-    { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash-Lite' },
-    { id: 'gemini-3-pro-preview', name: 'Gemini 3 Pro Preview' },
-    { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash Preview' },
-    { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro Preview' },
-    { id: 'gemini-3.1-pro-preview-customtools', name: 'Gemini 3.1 Pro Preview Custom Tools' },
-    { id: 'gemini-3.1-flash-lite-preview', name: 'Gemini 3.1 Flash Lite Preview' },
-    { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite' },
-    { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash' },
-    { id: 'gemini-robotics-er-1.5-preview', name: 'Gemini Robotics-ER 1.5 Preview' },
-    { id: 'gemini-robotics-er-1.6-preview', name: 'Gemini Robotics-ER 1.6 Preview' }
+    { id: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash-Lite (Tốc độ cao)' },
+    { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' },
+    { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' },
 ];
 
 interface SettingsModalProps {
@@ -124,11 +107,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                         </label>
                         <input
                             type="text"
+                            list="model-suggestions"
                             value={selectedModel}
                             onChange={(e) => setSelectedModel(e.target.value)}
                             placeholder="Nhập tên mô hình AI (VD: gemini-2.5-flash)..."
                             className="w-full bg-surface-950 border border-white/10 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-accent-indigo transition-colors"
                         />
+                        <datalist id="model-suggestions">
+                            {AI_MODELS.map((m) => (
+                                <option key={m.id} value={m.id}>
+                                    {m.name}
+                                </option>
+                            ))}
+                        </datalist>
+                        <p className="text-xs text-slate-500 mt-1.5">
+                            Bạn có thể tự nhập bất kỳ model ID nào (VD: <code>gemini-2.5-flash</code>, <code>gemini-2.0-flash</code>, <code>gemini-1.5-pro</code>...).
+                        </p>
                     </div>
 
                     <div className="pt-4 border-t border-white/[0.04]">

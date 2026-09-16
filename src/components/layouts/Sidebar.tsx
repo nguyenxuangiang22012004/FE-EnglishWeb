@@ -11,13 +11,37 @@ import {
 import { AvatarDropdown } from './AvatarDropdown';
 import { useAppSelector } from '@/store';
 
+export interface SubNavItem {
+    href: string;
+    label: string;
+    icon?: React.ReactNode;
+    badge?: string;
+}
+
+export interface NavItem {
+    href?: string;
+    label: string;
+    icon: React.ReactNode;
+    badge?: string;
+    children?: SubNavItem[];
+}
+
 export const Sidebar: React.FC = () => {
     const pathname = usePathname();
-    const isActive = (path: string) => path !== '#' && (pathname === path || pathname.startsWith(`${path}/`));
+    const isActive = (path?: string) => Boolean(path && path !== '#' && (pathname === path || pathname.startsWith(`${path}/`)));
     const user = useAppSelector((state) => state.auth.user);
     const isAdmin = user?.role === 'admin';
 
-    const sections = [
+    // Track open submenus, default writing open if on a writing page
+    const [writingOpen, setWritingOpen] = React.useState(pathname?.startsWith('/writing') ?? true);
+
+    React.useEffect(() => {
+        if (pathname?.startsWith('/writing')) {
+            setWritingOpen(true);
+        }
+    }, [pathname]);
+
+    const sections: { title: string; items: NavItem[] }[] = [
         {
             title: 'TỔNG QUAN',
             items: [
@@ -33,16 +57,18 @@ export const Sidebar: React.FC = () => {
                 { href: '/ai-lookup', label: 'AI Tra cứu', icon: <Library size={18} /> },
                 { href: '/conversation', label: 'Luyện nói AI', icon: <MessageCircle size={18} /> },
                 { href: '/ailistening', label: 'Luyện nghe', icon: <PlayCircle size={18} />, badge: 'Mới' },
+                {
+                    label: 'Luyện Viết',
+                    icon: <BookOpen size={18} />,
+                    badge: 'Mới',
+                    children: [
+                        { href: '/writing/topic', label: 'Viết theo chủ đề' },
+                        { href: '/writing/review', label: 'Chữa bài viết AI' },
+                        { href: '/writing/history', label: 'Lịch sử & Tiến độ' },
+                    ]
+                },
             ]
         },
-        // {
-        //     title: 'THƯ VIỆN',
-        //     items: [
-        //         // { href: '/dashboard', label: 'Thư viện của bạn', icon: <ListIcon size={18} /> },
-        //         // { href: '/create', label: 'Tạo thư mục mới', icon: <Star size={18} /> },
-        //         { href: '/import', label: 'Import từ vựng', icon: <Mic size={18} /> },
-        //     ]
-        // },
         {
             title: 'CỘNG ĐỒNG & TIẾN ĐỘ',
             items: [
@@ -88,11 +114,69 @@ export const Sidebar: React.FC = () => {
                             {/* Items */}
                             <div className="space-y-1">
                                 {section.items.map((item) => {
+                                    if (item.children) {
+                                        const isParentActive = item.children.some(c => isActive(c.href));
+                                        return (
+                                            <div key={item.label} className="space-y-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setWritingOpen(!writingOpen)}
+                                                    className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-[14px] transition-all duration-200 font-medium ${isParentActive
+                                                        ? 'bg-white/[0.08] text-white shadow-sm'
+                                                        : 'text-slate-300 hover:bg-white/[0.04] hover:text-white'
+                                                        }`}
+                                                >
+                                                    <span className={isParentActive ? 'text-accent-indigo-light' : 'text-slate-400'}>
+                                                        {item.icon}
+                                                    </span>
+                                                    <span className="flex-1 text-left text-[15px]">{item.label}</span>
+                                                    {item.badge && (
+                                                        <span className="px-2.5 py-0.5 rounded-lg bg-indigo-500/20 text-indigo-300 text-xs font-bold font-mono">
+                                                            {item.badge}
+                                                        </span>
+                                                    )}
+                                                    <svg
+                                                        className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${writingOpen ? 'rotate-180' : ''}`}
+                                                        fill="none"
+                                                        viewBox="0 0 24 24"
+                                                        stroke="currentColor"
+                                                    >
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                    </svg>
+                                                </button>
+
+                                                {/* Sub-items accordion */}
+                                                {writingOpen && (
+                                                    <div className="pl-6 space-y-1 border-l border-white/[0.08] ml-5 my-1">
+                                                        {item.children.map((child) => {
+                                                            const childActive = isActive(child.href);
+                                                            return (
+                                                                <Link
+                                                                    key={child.label}
+                                                                    href={child.href}
+                                                                    className={`flex items-center justify-between px-3 py-2 rounded-[10px] text-[13.5px] transition-all duration-200 ${childActive
+                                                                        ? 'bg-accent-indigo/20 text-indigo-300 font-semibold shadow-sm'
+                                                                        : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
+                                                                        }`}
+                                                                >
+                                                                    <span>{child.label}</span>
+                                                                    {childActive && (
+                                                                        <span className="w-1.5 h-1.5 rounded-full bg-accent-indigo"></span>
+                                                                    )}
+                                                                </Link>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    }
+
                                     const active = isActive(item.href);
                                     return (
                                         <Link
                                             key={item.label}
-                                            href={item.href}
+                                            href={item.href || '#'}
                                             className={`flex items-center gap-3.5 px-3 py-2.5 rounded-[14px] transition-all duration-200 font-medium ${active
                                                 ? 'bg-white/[0.08] text-white shadow-sm'
                                                 : 'text-slate-300 hover:bg-white/[0.04] hover:text-white'
