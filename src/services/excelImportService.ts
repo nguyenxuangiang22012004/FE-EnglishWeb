@@ -1,4 +1,4 @@
-﻿import axios from '@/config/axios';
+import axios from '@/config/axios';
 import { AIVocabItem } from './importAIService';
 
 /**
@@ -21,7 +21,6 @@ export async function previewExcelFile(file: File): Promise<AIVocabItem[]> {
 
     // BE trả về List<CreateFlashcardRequest>
     // Map sang AIVocabItem để tái dùng WordList + useImportVocabulary
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (res.data.data as any[]).map((item) => ({
         word:         item.word         ?? '',
         meaning:      item.meaning      ?? '',
