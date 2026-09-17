@@ -28,9 +28,23 @@ export const SignupForm: React.FC = () => {
 
     const getRegisterErrorMessage = (err: unknown): string => {
         if (axios.isAxiosError(err)) {
-            const data = err.response?.data as { message?: string; error?: string };
-            if (typeof data?.message === 'string') return data.message;
+            const data = err.response?.data as { message?: string; error?: string; data?: Record<string, string> };
+            if (typeof data?.message === 'string') {
+                if (data.message === 'Email already exists') {
+                    return 'Email này đã được đăng ký. Vui lòng chọn email khác hoặc đăng nhập.';
+                }
+                if (data.message === 'Passwords do not match') {
+                    return 'Mật khẩu xác nhận không khớp.';
+                }
+                if (data.message === 'Validation Error' && data.data && typeof data.data === 'object') {
+                    return Object.values(data.data).join(', ');
+                }
+                return data.message;
+            }
             if (typeof data?.error === 'string') return data.error;
+            if (err.response?.status === 500) {
+                return 'Lỗi hệ thống máy chủ. Vui lòng thử lại sau.';
+            }
         }
         return 'Lỗi đăng ký. Vui lòng thử lại.';
     };

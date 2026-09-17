@@ -15,11 +15,11 @@ function removeTokenCookie(name: string) {
 
 // Auth Service
 export const authService = {
-  login: async (credentials: AuthCredentials): Promise<AuthResponse> => {
+  login: async (credentials: AuthCredentials, rememberMe = false): Promise<AuthResponse> => {
     const response = await axios.post('/auth/login', credentials);
     // Lưu token vào cookie để Next.js middleware đọc được
     if (response.data?.data?.accessToken) {
-      saveTokenToCookie('token', response.data.data.accessToken);
+      saveTokenToCookie('token', response.data.data.accessToken, rememberMe ? 30 : 1);
     }
     return response.data;
   },

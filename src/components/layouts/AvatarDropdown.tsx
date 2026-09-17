@@ -32,12 +32,10 @@ export const AvatarDropdown: React.FC = () => {
     }, []);
 
     const handleLogout = () => {
-        if (window.confirm('Bạn chắc chắn muốn đăng xuất?')) {
-            setIsOpen(false);
-            authService.logout();
-            dispatch(logout());
-            router.push('/auth/login');
-        }
+        setIsOpen(false);
+        authService.logout();
+        dispatch(logout());
+        router.push('/auth/login');
     };
 
     const getInitials = (name: string) => {

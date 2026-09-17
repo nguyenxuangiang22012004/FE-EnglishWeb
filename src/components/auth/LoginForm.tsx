@@ -31,9 +31,23 @@ export const LoginForm: React.FC = () => {
 
     const getLoginErrorMessage = (err: unknown): string => {
         if (axios.isAxiosError(err)) {
-            const data = err.response?.data as { message?: string; error?: string };
-            if (typeof data?.message === 'string') return data.message;
+            const data = err.response?.data as { message?: string; error?: string; data?: Record<string, string> };
+            if (typeof data?.message === 'string') {
+                if (data.message === 'Invalid email or password' || data.message.includes('BadCredentialsException')) {
+                    return 'Email hoặc mật khẩu không chính xác.';
+                }
+                if (data.message === 'Validation Error' && data.data && typeof data.data === 'object') {
+                    return Object.values(data.data).join(', ');
+                }
+                return data.message;
+            }
             if (typeof data?.error === 'string') return data.error;
+            if (err.response?.status === 401) {
+                return 'Email hoặc mật khẩu không chính xác.';
+            }
+            if (err.response?.status === 500) {
+                return 'Lỗi hệ thống máy chủ. Vui lòng thử lại sau.';
+            }
         }
         return 'Lỗi đăng nhập. Vui lòng thử lại.';
     };
@@ -89,7 +103,7 @@ export const LoginForm: React.FC = () => {
             const response = await authService.login({
                 email: formData.email.trim(),
                 password: formData.password,
-            });
+            }, formData.rememberMe);
 
             // Store token and user info
             if (response.success && response.data.accessToken) {
