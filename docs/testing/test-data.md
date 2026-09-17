@@ -14,10 +14,10 @@ Tài liệu này mô tả account và dữ liệu test dùng chung cho manual QA
 
 | Role | Username | Password reference | Environment |
 | --- | --- | --- | --- |
-| Student | `1hsep` | `TEST_STUDENT_PASSWORD` | Local, Public (`https://dev.xlms.vn`) |
-| Teacher | `10gvgv` | `TEST_TEACHER_PASSWORD` | Local, Public (`https://dev.xlms.vn`) |
-| Admin | `truongadmin` | `TEST_ADMIN_PASSWORD` | Local, Public (`https://dev.xlms.vn`) |
-| Parent | `parent_user1` (có tài khoản con liên kết) | `TEST_PARENT_PASSWORD` | Local (đã dùng 2026-09-17); Public chưa kiểm tra |
+<!-- | Student | `1hsep` | `TEST_STUDENT_PASSWORD` | Local, Public (`https://dev.xlms.vn`) |
+| Teacher | `10gvgv` | `TEST_TEACHER_PASSWORD` | Local, Public (`https://dev.xlms.vn`) | -->
+| User | `giangadmin@gmail.com` | `TEST_ADMIN_PASSWORD` | Local, Public (`https://fe-english-web-theta.vercel.app`) |
+<!-- | Parent | `parent_user1` (có tài khoản con liên kết) | `TEST_PARENT_PASSWORD` | Local (đã dùng 2026-09-17); Public chưa kiểm tra | -->
 
 ## Quy tắc sử dụng account
 

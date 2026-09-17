@@ -7,7 +7,8 @@ import { useRouter } from 'next/navigation';
 export const CourseListPage: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const router = useRouter();
 
@@ -15,14 +16,17 @@ export const CourseListPage: React.FC = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const response = await courseService.getCourses(currentPage - 1, 6);
+        const response = await courseService.getCourses(page, 6);
         const coursesData = Array.isArray(response) ? response : response.content;
         
         if (coursesData) {
           setCourses(coursesData);
         }
-        if (!Array.isArray(response) && response.totalPages !== undefined) {
-          setTotalPages(response.totalPages);
+        if (!Array.isArray(response)) {
+          if (response.totalPages !== undefined) setTotalPages(response.totalPages);
+          if (response.total !== undefined || response.totalElements !== undefined) {
+            setTotal(response.total ?? response.totalElements ?? 0);
+          }
         }
       } catch (error) {
         console.error("Failed to fetch courses", error);
@@ -31,7 +35,7 @@ export const CourseListPage: React.FC = () => {
       }
     };
     fetchData();
-  }, [currentPage]);
+  }, [page]);
 
   const handleSelectCourse = (course: Course) => {
     router.push(`/courses/${course.id}`);
@@ -81,9 +85,12 @@ export const CourseListPage: React.FC = () => {
       {totalPages > 1 && (
         <div className="mt-8">
           <Pagination 
-            currentPage={currentPage} 
+            page={page} 
             totalPages={totalPages} 
-            onPageChange={(page) => setCurrentPage(page)} 
+            total={total}
+            pageSize={6}
+            onPageChange={(p) => setPage(p)} 
+            itemLabel="khóa học"
           />
         </div>
       )}
