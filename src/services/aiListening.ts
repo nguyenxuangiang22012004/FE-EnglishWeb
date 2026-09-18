@@ -1,6 +1,7 @@
 // services/aiListening.ts
-// Thay thế youtubeTranscript.ts — dùng Gemini để sinh bài nghe theo chủ đề
+// Luyện nghe AI — dùng Gemini để sinh bài nghe theo chủ đề với Trial Quota & Fallback Model
 import axios from '@/config/axios';
+import { callGeminiJSON } from './geminiHelpers';
 
 export interface ListeningQuestion {
   id: number;
@@ -27,20 +28,24 @@ export interface QuizResult {
   correct: boolean;
 }
 
-// ─── Gemini API ────────────────────────────────────────────────────────────────
-
-function getGeminiKey(): string {
-  if (typeof window === 'undefined') return '';
-  return (
-    localStorage.getItem('gemini_api_key') ||
-    localStorage.getItem('geminiKey') ||
-    ''
-  );
+export interface ExampleTopic {
+  label: string;
+  topic: string;
+  level: CEFRLevel;
 }
 
-function getGeminiModel(): string {
-  if (typeof window === 'undefined') return 'gemini-2.5-flash';
-  return localStorage.getItem('gemini_model_id') || 'gemini-2.5-flash';
+export const EXAMPLE_TOPICS: ExampleTopic[] = [
+  { label: '☕ Quán cà phê buổi sáng', topic: 'A Morning at a Cozy Coffee Shop', level: 'A2' },
+  { label: '✈️ Kế hoạch du lịch', topic: 'Planning a Weekend Trip with Friends', level: 'B1' },
+  { label: '💼 Phỏng vấn xin việc', topic: 'A Professional Job Interview Experience', level: 'B2' },
+  { label: '🌍 Biến đổi khí hậu', topic: 'Climate Change and Daily Sustainable Habits', level: 'B2' },
+  { label: '🍜 Ẩm thực đường phố', topic: 'Exploring Local Street Food Markets', level: 'B1' },
+  { label: '🤖 Trí tuệ nhân tạo trong giáo dục', topic: 'Artificial Intelligence Trends in Modern Education', level: 'C1' },
+];
+
+export function getEnglishVoices(): SpeechSynthesisVoice[] {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return [];
+  return window.speechSynthesis.getVoices().filter((v) => v.lang.startsWith('en'));
 }
 
 // ─── Validation & Normalization ───────────────────────────────────────────────
@@ -77,6 +82,12 @@ function validateAndNormalize(
     throw new Error('AI không tạo được đoạn văn bài nghe. Vui lòng thử lại.');
   }
 
+  // --- passageVi ---
+  const passageVi =
+    typeof raw['passageVi'] === 'string' && raw['passageVi'].trim()
+      ? raw['passageVi'].trim()
+      : '';
+
   // --- questions ---
   if (!Array.isArray(raw['questions']) || raw['questions'].length === 0) {
     throw new Error('AI không tạo được câu hỏi. Vui lòng thử lại.');
@@ -94,85 +105,58 @@ function validateAndNormalize(
 
       const qRaw = q as Record<string, unknown>;
 
-      // id: ép về number, fallback là index + 1
-      const id =
-        typeof qRaw['id'] === 'number'
-          ? qRaw['id']
-          : typeof qRaw['id'] === 'string' && !isNaN(Number(qRaw['id']))
-            ? Number(qRaw['id'])
-            : index + 1;
+      const id = typeof qRaw['id'] === 'number' ? qRaw['id'] : index + 1;
 
-      // question text
       const questionText =
         typeof qRaw['question'] === 'string' && qRaw['question'].trim()
           ? qRaw['question'].trim()
-          : `Question ${id}`;
+          : `Question ${index + 1}`;
 
-      // options: đảm bảo đúng 4 phần tử format "A. ...", "B. ...", "C. ...", "D. ..."
-      let options: string[] = [];
-
+      let rawOptions: string[] = [];
       if (Array.isArray(qRaw['options'])) {
-        options = (qRaw['options'] as unknown[]).slice(0, 4).map((opt, i) => {
-          const prefix = OPTION_PREFIXES[i];
-          const optStr = typeof opt === 'string' ? opt.trim() : `Option ${VALID_ANSWERS[i]}`;
-
-          // Nếu đã có prefix đúng rồi thì giữ nguyên
-          if (optStr.startsWith(prefix)) return optStr;
-
-          // Nếu có prefix khác (VD: "A) ..." hoặc "a. ...") thì chuẩn hóa
-          const stripped = optStr.replace(/^[A-Da-d][.):\s]+/, '').trim();
-          return `${prefix}${stripped}`;
-        });
+        rawOptions = (qRaw['options'] as unknown[])
+          .map((opt) => (typeof opt === 'string' ? opt.trim() : ''))
+          .filter(Boolean);
       }
 
-      // Điền đủ 4 options nếu thiếu
-      while (options.length < 4) {
-        options.push(`${OPTION_PREFIXES[options.length]}(No option provided)`);
-      }
+      const options: string[] = OPTION_PREFIXES.map((prefix, i) => {
+        const rawOpt = rawOptions[i] ?? `Option ${prefix[0]}`;
+        if (/^[A-D]\.\s/i.test(rawOpt)) {
+          return `${prefix[0].toUpperCase()}. ${rawOpt.replace(/^[A-D]\.\s*/i, '')}`;
+        }
+        return `${prefix}${rawOpt}`;
+      });
 
-      // answer: chỉ lấy ký tự đầu tiên, uppercase
-      // Xử lý các case lạ: "Answer: A", "a", "A.", "(A)", v.v.
       let answer = 'A';
       if (typeof qRaw['answer'] === 'string') {
-        const answerRaw = qRaw['answer'].trim().toUpperCase();
-        // Tìm ký tự A/B/C/D đầu tiên trong chuỗi
-        const match = answerRaw.match(/[A-D]/);
-        if (match) answer = match[0];
+        const match = qRaw['answer'].trim().toUpperCase().match(/[A-D]/);
+        if (match && VALID_ANSWERS.includes(match[0])) {
+          answer = match[0];
+        }
       }
 
-      // explanation
       const explanation =
         typeof qRaw['explanation'] === 'string' && qRaw['explanation'].trim()
           ? qRaw['explanation'].trim()
-          : `The correct answer is ${answer}.`;
+          : undefined;
 
       return { id, question: questionText, options, answer, explanation };
     });
 
   if (questions.length === 0) {
-    throw new Error('Bài nghe tạo ra không có câu hỏi hợp lệ. Vui lòng thử lại.');
+    throw new Error('AI không tạo được câu hỏi trắc nghiệm hợp lệ. Vui lòng thử lại.');
   }
-
-  // --- passageVi ---
-  const passageVi =
-    typeof raw['passageVi'] === 'string' && raw['passageVi'].trim()
-      ? raw['passageVi'].trim()
-      : ''; // fallback rỗng — không throw error, UI sẽ ẩn nút song ngữ nếu trống
 
   return { title, passage, passageVi, questions };
 }
 
-// ─── Generate ─────────────────────────────────────────────────────────────────
+// ─── Sinh bài nghe với Gemini ──────────────────────────────────────────────────
 
 export async function generateListeningLesson(
   topic: string,
-  level: CEFRLevel,
+  level: CEFRLevel = 'B1',
   questionCount: number = 5
 ): Promise<ListeningLesson> {
-  const key = getGeminiKey();
-  if (!key) throw new Error('Chưa có Gemini API Key. Vui lòng thêm key trong Cài đặt.');
-  const model = getGeminiModel();
-
   const wordCountMap: Record<CEFRLevel, string> = {
     A2: '80-110',
     B1: '120-160',
@@ -225,50 +209,11 @@ EXAMPLE of valid output (use this exact structure):
   ]
 }`;
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 2048,
-          responseMimeType: 'application/json',
-        },
-      }),
-    }
-  );
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    const msg = (err as { error?: { message?: string } }).error?.message || `HTTP ${res.status}`;
-    throw new Error(`Gemini API lỗi: ${msg}`);
-  }
-
-  const data = await res.json();
-  let raw: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-
-  // Strip markdown fences if Gemini returns them despite responseMimeType
-  raw = raw
-    .replace(/```json[\s\S]*?```/g, (m: string) => m.slice(m.indexOf('\n') + 1, m.lastIndexOf('```')))
-    .replace(/```[\s\S]*?```/g, '')
-    .trim();
-
-  // Trích xuất JSON object đầu tiên nếu AI có text thừa bao quanh
-  const jsonStart = raw.indexOf('{');
-  const jsonEnd = raw.lastIndexOf('}');
-  if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-    raw = raw.slice(jsonStart, jsonEnd + 1);
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    throw new Error('Gemini trả về dữ liệu không phải JSON hợp lệ. Vui lòng thử lại.');
-  }
+  const parsed = await callGeminiJSON<unknown>(prompt, {
+    featureName: 'ai-listening',
+    temperature: 0.7,
+    maxOutputTokens: 2048,
+  });
 
   const normalized = validateAndNormalize(parsed, topic, level, questionCount);
   return { ...normalized, topic, level };
@@ -289,35 +234,18 @@ export function scoreQuiz(
 
 export function calcScore(results: QuizResult[]): number {
   if (!results.length) return 0;
-  const correct = results.filter((r) => r.correct).length;
-  return Math.round((correct / results.length) * 100);
+  const correctCount = results.filter((r) => r.correct).length;
+  return Math.round((correctCount / results.length) * 100);
 }
 
-// ─── TTS helpers ──────────────────────────────────────────────────────────────
+// ─── Lịch sử & Backend API ─────────────────────────────────────────────────────
 
-export function getEnglishVoices(): SpeechSynthesisVoice[] {
-  if (typeof window === 'undefined') return [];
-  return window.speechSynthesis.getVoices().filter((v) => v.lang.startsWith('en'));
-}
-
-export const EXAMPLE_TOPICS: { label: string; topic: string; level: CEFRLevel }[] = [
-  { label: '☕ Coffee shop chat', topic: 'A conversation between two friends at a London coffee shop', level: 'A2' },
-  { label: '🌿 Environment', topic: 'How cities are becoming greener and more eco-friendly', level: 'B1' },
-  { label: '🧠 Psychology', topic: 'Why people procrastinate and how to overcome it', level: 'B2' },
-  { label: '🚀 Technology', topic: 'The impact of artificial intelligence on the future of work', level: 'B2' },
-  { label: '🌏 Travel', topic: 'Tips for solo backpacking across Southeast Asia on a budget', level: 'B1' },
-  { label: '🍣 Food culture', topic: 'The history and culture of Japanese street food', level: 'B1' },
-  { label: '🎭 Arts', topic: 'How modern theater is adapting to digital audiences', level: 'C1' },
-];
-
-// ─── API History ──────────────────────────────────────────────────────────────
-
-export interface SaveAiListeningHistoryRequest {
+export interface SaveListeningHistoryPayload {
   topic: string;
   level: CEFRLevel;
   lessonData: ListeningLesson;
-  userAnswersData: Record<number, string>;
-  score: number;
+  userAnswersData?: Record<number, string>;
+  score?: number;
 }
 
 export interface AiListeningHistoryResponse {
@@ -328,32 +256,43 @@ export interface AiListeningHistoryResponse {
   userAnswersData: Record<number, string>;
   score: number;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface PaginatedResponse<T> {
   content: T[];
-  totalPages: number;
   totalElements: number;
+  totalPages: number;
   size: number;
   number: number;
 }
 
-export async function saveListeningHistory(data: SaveAiListeningHistoryRequest): Promise<AiListeningHistoryResponse> {
-  const res = await axios.post('/ai-listening/history', data);
-  return res.data.data; // assuming ApiResponse wrapper
+export async function saveListeningHistory(
+  payload: SaveListeningHistoryPayload
+): Promise<AiListeningHistoryResponse> {
+  const res = await axios.post('/ai-listening/history', payload);
+  return res.data?.data;
 }
 
-export async function updateListeningHistory(id: string, data: Partial<SaveAiListeningHistoryRequest>): Promise<AiListeningHistoryResponse> {
-  const res = await axios.put(`/ai-listening/history/${id}`, data);
-  return res.data.data;
+export async function updateListeningHistory(
+  id: string,
+  payload: { userAnswersData?: Record<number, string>; score?: number }
+): Promise<AiListeningHistoryResponse> {
+  const res = await axios.put(`/ai-listening/history/${id}`, payload);
+  return res.data?.data;
 }
 
-export async function getListeningHistory(page = 0, size = 10): Promise<PaginatedResponse<AiListeningHistoryResponse>> {
-  const res = await axios.get('/ai-listening/history', { params: { page, size } });
-  return res.data.data;
-}
-
-export async function getListeningHistoryById(id: string): Promise<AiListeningHistoryResponse> {
+export async function getListeningHistoryById(
+  id: string
+): Promise<AiListeningHistoryResponse> {
   const res = await axios.get(`/ai-listening/history/${id}`);
-  return res.data.data;
+  return res.data?.data;
+}
+
+export async function getListeningHistory(
+  page = 0,
+  size = 10
+): Promise<PaginatedResponse<AiListeningHistoryResponse>> {
+  const res = await axios.get('/ai-listening/history', { params: { page, size } });
+  return res.data?.data;
 }

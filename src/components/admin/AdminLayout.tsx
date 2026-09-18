@@ -14,6 +14,7 @@ import {
   Menu,
   X,
   ChevronRight,
+  Sparkles,
 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { logout } from '@/store/slices/authSlice';
@@ -45,6 +46,11 @@ const adminNavItems = [
     href: '/admin/lessons',
     label: 'Quản lý Bài làm',
     icon: <FileText size={18} />,
+  },
+  {
+    href: '/admin/ai-settings',
+    label: 'Quản lý AI & API Key',
+    icon: <Sparkles size={18} />,
   },
 ];
 

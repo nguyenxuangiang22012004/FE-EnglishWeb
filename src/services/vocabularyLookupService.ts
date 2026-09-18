@@ -87,17 +87,14 @@ export async function lookupEnglishWord(
         console.warn('FreeDictionaryAPI.com failed, trying fallback:', apiErr);
     }
 
-    // 2. Fallback to Gemini AI if key exists
-    const geminiKey = getGeminiKey();
-    if (geminiKey) {
-        try {
-            return await callGeminiJSON<VocabularyLookupResult>(
-                ENGLISH_LOOKUP_PROMPT(trimmed),
-                signal,
-            );
-        } catch (geminiError) {
-            console.warn('Gemini lookup fallback error:', geminiError);
-        }
+    // 2. Fallback to Gemini AI (User Key hoặc Trial Quota)
+    try {
+        return await callGeminiJSON<VocabularyLookupResult>(
+            ENGLISH_LOOKUP_PROMPT(trimmed),
+            { featureName: 'ai-lookup', signal }
+        );
+    } catch (geminiError) {
+        console.warn('Gemini lookup fallback error:', geminiError);
     }
 
     // 3. Last fallback
@@ -122,6 +119,6 @@ export async function lookupVietnameseMeaning(
 
     return callGeminiJSON<VocabularyLookupResult>(
         VIETNAMESE_LOOKUP_PROMPT(trimmed),
-        signal,
+        { featureName: 'ai-lookup', signal }
     );
 }

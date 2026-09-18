@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Mic, Send, Settings, AlertCircle, Loader2, Volume2, Square } from 'lucide-react';
 import { startConversation } from '@/services/gemini';
+import { resolveGeminiCredentials } from '@/services/geminiHelpers';
 import { speakText, startListening } from '@/utils/speech';
 import { useRouter } from 'next/navigation';
 import { conversationService, Conversation, ConversationMessage } from '@/services/conversationService';
@@ -122,19 +123,15 @@ export default function ConversationUI() {
             return;
         }
 
-        const storedKey = localStorage.getItem('gemini_api_key');
-        const storedModel = localStorage.getItem('gemini_model_id') || 'gemini-1.5-pro';
-
-        if (!storedKey) {
-            setError('Bạn chưa nhập API Key. Vui lòng vào Cài đặt (ở menu Avatar) để thiết lập.');
-            return;
-        }
-
         localStorage.setItem('conversation_topic', topic.trim());
         setError('');
         setIsLoading(true);
 
         try {
+            const credentials = await resolveGeminiCredentials('ai-conversation');
+            const storedKey = credentials.apiKey;
+            const storedModel = credentials.model || localStorage.getItem('gemini_model_id') || 'gemini-2.5-flash';
+
             const conv = await conversationService.createConversation(topic.trim(), storedModel, level, '');
             setActiveConversationId(conv.id);
             router.push(`?id=${conv.id}`);
@@ -209,8 +206,17 @@ export default function ConversationUI() {
     };
 
     const generateFeedbackForUserMessage = async (convId: string, msgId: string, userText: string) => {
-        const storedKey = localStorage.getItem('gemini_api_key');
-        const storedModel = localStorage.getItem('gemini_model_id') || 'gemini-1.5-pro';
+        let storedKey = localStorage.getItem('gemini_api_key');
+        let storedModel = localStorage.getItem('gemini_model_id') || 'gemini-2.5-flash';
+        if (!storedKey) {
+            try {
+                const cred = await resolveGeminiCredentials('ai-conversation');
+                storedKey = cred.apiKey;
+                storedModel = cred.model || storedModel;
+            } catch (e) {
+                return;
+            }
+        }
         if (!storedKey) return;
 
         try {
@@ -256,8 +262,17 @@ Do NOT output anything outside the json code block.`;
     };
 
     const generateVocabularyForNextTurn = async (convId: string, convTopic: string, lastUserMsg: string, lastAiMsg: string) => {
-        const storedKey = localStorage.getItem('gemini_api_key');
-        const storedModel = localStorage.getItem('gemini_model_id') || 'gemini-1.5-pro';
+        let storedKey = localStorage.getItem('gemini_api_key');
+        let storedModel = localStorage.getItem('gemini_model_id') || 'gemini-2.5-flash';
+        if (!storedKey) {
+            try {
+                const cred = await resolveGeminiCredentials('ai-conversation');
+                storedKey = cred.apiKey;
+                storedModel = cred.model || storedModel;
+            } catch (e) {
+                return;
+            }
+        }
         if (!storedKey) return;
 
         try {

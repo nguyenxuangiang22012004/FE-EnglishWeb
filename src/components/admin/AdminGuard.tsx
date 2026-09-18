@@ -23,7 +23,7 @@ export const AdminGuard: React.FC<{ children: React.ReactNode }> = ({ children }
       }
     }
     // Nếu đã có user nhưng không phải ADMIN → về dashboard
-    if (user && user.role !== 'admin') {
+    if (user && user.role?.toLowerCase() !== 'admin') {
       router.replace('/dashboard');
     }
   }, [user, token, router]);
@@ -40,7 +40,7 @@ export const AdminGuard: React.FC<{ children: React.ReactNode }> = ({ children }
     );
   }
 
-  if (user.role !== 'admin') {
+  if (user.role?.toLowerCase() !== 'admin') {
     return null;
   }
 

@@ -30,7 +30,7 @@ export const Sidebar: React.FC = () => {
     const pathname = usePathname();
     const isActive = (path?: string) => Boolean(path && path !== '#' && (pathname === path || pathname.startsWith(`${path}/`)));
     const user = useAppSelector((state) => state.auth.user);
-    const isAdmin = user?.role === 'admin';
+    const isAdmin = user?.role?.toLowerCase() === 'admin';
 
     // Track open submenus, default writing open if on a writing page
     const [writingOpen, setWritingOpen] = React.useState(pathname?.startsWith('/writing') ?? true);

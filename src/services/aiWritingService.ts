@@ -297,6 +297,7 @@ Constraints:
 - bodyParagraphs: 2 well-structured body paragraphs.`;
 
   const raw = await callGeminiJSON<unknown>(prompt, {
+    featureName: 'ai-writing',
     temperature: 0.2,
     maxOutputTokens: 1500,
     thinkingBudget: 0,
@@ -526,6 +527,7 @@ Return ONLY this JSON:
 Constraints: corrections max 2 items (or [] if none).`;
 
   const raw = await callGeminiJSON<Record<string, unknown>>(prompt, {
+    featureName: 'ai-writing',
     temperature: 0.1,
     maxOutputTokens: 800,
     thinkingBudget: 0,
@@ -645,6 +647,7 @@ Return ONLY this JSON schema:
 }`;
 
   const raw = await callGeminiJSON<unknown>(prompt, {
+    featureName: 'ai-writing',
     temperature: 0.1,
     maxOutputTokens: 3500,
     thinkingBudget: 0,

@@ -46,7 +46,18 @@ export const AvatarDropdown: React.FC = () => {
             .toUpperCase();
     };
 
+    const isAdmin = user?.role?.toLowerCase() === 'admin';
+
     const menuItems = [
+        ...(isAdmin
+            ? [
+                  {
+                      label: 'Quản trị hệ thống',
+                      icon: '🛡️',
+                      href: '/admin',
+                  },
+              ]
+            : []),
         {
             label: 'Hồ sơ của tôi',
             icon: '👤',

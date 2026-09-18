@@ -4,7 +4,7 @@
  * - Cấu hình temperature: 0.0 và Caching để response luôn CỐ ĐỊNH, không bị mỗi lần gọi một kiểu.
  */
 
-import { getGeminiKey, getGeminiModel } from './geminiHelpers';
+import { callGeminiJSON } from './geminiHelpers';
 
 export interface SituationEvaluationResult {
     isCorrect: boolean;
@@ -83,54 +83,32 @@ export async function evaluateSituationResponse(
         return evaluationCache.get(cacheKey)!;
     }
 
-    const key = getGeminiKey();
-    if (key) {
-        try {
-            const model = getGeminiModel();
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
-
-            const res = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+    // 2. Gọi Gemini AI với cơ chế xoay tua và dùng thử
+    try {
+        const parsed = await callGeminiJSON<SituationEvaluationResult>(
+            SITUATION_EVAL_PROMPT(trimmedSituation, trimmedAnswer),
+            {
+                featureName: 'ai-conversation',
+                temperature: 0.0,
+                maxOutputTokens: 600,
                 signal,
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: SITUATION_EVAL_PROMPT(trimmedSituation, trimmedAnswer) }] }],
-                    generationConfig: {
-                        temperature: 0.0, // Cố định kết quả, không sinh ngẫu nhiên
-                        maxOutputTokens: 600,
-                        responseMimeType: 'application/json',
-                    },
-                }),
-            });
-
-            if (res.ok) {
-                const data = await res.json();
-                let raw: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-                raw = raw
-                    .replace(/```json[\s\S]*?```/g, (m: string) =>
-                        m.slice(m.indexOf('\n') + 1, m.lastIndexOf('```'))
-                    )
-                    .replace(/```[\s\S]*?```/g, '')
-                    .trim();
-
-                const parsed = JSON.parse(raw) as SituationEvaluationResult;
-                const finalResult: SituationEvaluationResult = {
-                    isCorrect: Boolean(parsed.isCorrect),
-                    score: typeof parsed.score === 'number' ? parsed.score : 80,
-                    userTranscript: trimmedAnswer,
-                    feedback: parsed.feedback || 'Bạn đã hoàn thành câu trả lời cho tình huống này.',
-                    suggestedAnswer: parsed.suggestedAnswer || trimmedAnswer,
-                    suggestedMeaning: parsed.suggestedMeaning || '',
-                    grammarNotes: parsed.grammarNotes || ''
-                };
-
-                // Lưu vào cache
-                evaluationCache.set(cacheKey, finalResult);
-                return finalResult;
             }
-        } catch (err) {
-            console.warn('Gemini situation evaluation error, falling back to rule-based evaluation:', err);
-        }
+        );
+
+        const finalResult: SituationEvaluationResult = {
+            isCorrect: Boolean(parsed.isCorrect),
+            score: typeof parsed.score === 'number' ? parsed.score : 80,
+            userTranscript: trimmedAnswer,
+            feedback: parsed.feedback || 'Bạn đã hoàn thành tình huống này.',
+            suggestedAnswer: parsed.suggestedAnswer || trimmedAnswer,
+            suggestedMeaning: parsed.suggestedMeaning || '',
+            grammarNotes: parsed.grammarNotes || '',
+        };
+
+        evaluationCache.set(cacheKey, finalResult);
+        return finalResult;
+    } catch (apiErr) {
+        console.warn('Gemini situation evaluation failed:', apiErr);
     }
 
     // Fallback thông minh nếu không có key hoặc lỗi mạng

@@ -3,12 +3,24 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Sparkles } from 'lucide-react';
 import QuickLookupModal from './QuickLookupModal';
+import { useAppSelector } from '@/store';
 
 export const QuickLookupWidget: React.FC = () => {
+    const user = useAppSelector((state) => state.auth.user);
+    const token = useAppSelector((state) => state.auth.token);
     const [isOpen, setIsOpen] = useState(false);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-    // Global keyboard shortcut: Ctrl+K / Cmd+K
+    // Kiểm tra trạng thái đăng nhập cả từ Redux và LocalStorage
     useEffect(() => {
+        const storedToken = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+        setIsLoggedIn(Boolean(user || token || storedToken));
+    }, [user, token]);
+
+    // Global keyboard shortcut: Ctrl+K / Cmd+K (chỉ kích hoạt khi đã đăng nhập)
+    useEffect(() => {
+        if (!isLoggedIn) return;
+
         const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
                 e.preventDefault();
@@ -18,7 +30,12 @@ export const QuickLookupWidget: React.FC = () => {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
+    }, [isLoggedIn]);
+
+    // Nếu chưa đăng nhập thì không hiển thị widget tra từ nhanh
+    if (!isLoggedIn) {
+        return null;
+    }
 
     return (
         <>

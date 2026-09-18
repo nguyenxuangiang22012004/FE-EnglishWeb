@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { MODEL_ROTATION_CHAIN } from './geminiHelpers';
 
-export const getGeminiModel = (apiKey: string, modelId: string = 'gemini-1.5-pro') => {
+export const getGeminiModel = (apiKey: string, modelId: string = 'gemini-2.5-flash') => {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: modelId });
     return model;
@@ -10,32 +11,46 @@ export const startConversation = async (
     apiKey: string,
     topic: string,
     level: string = 'B1',
-    modelId: string = 'gemini-1.5-pro',
+    modelId: string = 'gemini-2.5-flash',
 ) => {
-    const model = getGeminiModel(apiKey, modelId);
+    // Model fallback sequence
+    const modelsToTry = [
+        modelId,
+        ...MODEL_ROTATION_CHAIN.filter((m) => m !== modelId),
+    ];
 
     const strictSystemPrompt = buildConversationSystemPrompt(topic, level);
+    let lastErr: any = null;
 
-    const chat = model.startChat({
-        history: [
-            {
-                role: 'user',
-                parts: [{ text: strictSystemPrompt }],
-            },
-            {
-                role: 'model',
-                parts: [{
-                    text: 'Understood. I will strictly follow the output format. My first response will always start with the ```json vocabulary block containing exactly 3 items, then my conversational opening sentence ending with a question. All subsequent replies will be plain English text only — no JSON, no markdown.',
-                }],
-            },
-        ],
-        generationConfig: {
-            maxOutputTokens: 600,
-            temperature: 0.5,
-        },
-    });
+    for (const currentModel of modelsToTry) {
+        try {
+            const model = getGeminiModel(apiKey, currentModel);
+            const chat = model.startChat({
+                history: [
+                    {
+                        role: 'user',
+                        parts: [{ text: strictSystemPrompt }],
+                    },
+                    {
+                        role: 'model',
+                        parts: [{
+                            text: 'Understood. I will strictly follow the output format. My first response will always start with the ```json vocabulary block containing exactly 3 items, then my conversational opening sentence ending with a question. All subsequent replies will be plain English text only — no JSON, no markdown.',
+                        }],
+                    },
+                ],
+                generationConfig: {
+                    maxOutputTokens: 600,
+                    temperature: 0.5,
+                },
+            });
+            return chat;
+        } catch (err) {
+            lastErr = err;
+            console.warn(`Lỗi khởi tạo chat với ${currentModel}, chuyển model tiếp theo...`);
+        }
+    }
 
-    return chat;
+    throw lastErr || new Error('Không thể khởi tạo cuộc hội thoại AI.');
 };
 
 export const buildConversationSystemPrompt = (topic: string, level: string): string => {

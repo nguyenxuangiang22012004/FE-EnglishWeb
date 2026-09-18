@@ -1,10 +1,29 @@
 /**
- * Shared Gemini API helpers.
- * Extracts common logic (key retrieval, model selection, API call)
- * so multiple features can reuse them without duplication.
+ * Shared Gemini API Helpers with AI Model Fallback Chain & Dual API Key Management.
+ * Hỗ trợ:
+ * 1. User API Key cá nhân (không giới hạn lượt)
+ * 2. Admin API Key dùng thử (tối đa 2 lượt/tính năng kèm chống gian lận)
+ * 3. Tự động xoay tua danh sách mô hình AI khi bị lỗi 429/503/404/Quota
  */
 
-export function getGeminiKey(): string {
+import { aiConfigService } from './aiConfigService';
+import { isFeatureTrialExhaustedLocal } from '@/utils/deviceFingerprint';
+
+// Thứ tự xoay tua mô hình AI ưu tiên cao nhất
+export const MODEL_ROTATION_CHAIN = [
+  'gemini-2.5-flash',
+  'gemini-3.1-flash-lite',
+  'gemini-2.5-flash-lite',
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-lite',
+  'gemini-3-flash',
+  'gemini-3.5-flash',
+  'gemini-3.7-flash',
+  'gemini-1.5-flash',
+  'gemini-1.5-pro',
+];
+
+export function getLocalGeminiKey(): string {
   if (typeof window === 'undefined') return '';
   return (
     localStorage.getItem('gemini_api_key') ||
@@ -13,11 +32,12 @@ export function getGeminiKey(): string {
   );
 }
 
+export const getGeminiKey = getLocalGeminiKey;
+
 export function getGeminiModel(): string {
   if (typeof window === 'undefined') return 'gemini-2.5-flash';
   let model = localStorage.getItem('gemini_model_id') || 'gemini-2.5-flash';
   
-  // TTS models are for audio synthesis, not generateContent text/JSON APIs
   if (model.includes('-tts') || model.includes('tts')) {
     model = 'gemini-2.5-flash';
   }
@@ -25,6 +45,7 @@ export function getGeminiModel(): string {
 }
 
 export interface GeminiCallOptions {
+  featureName?: string; // Tên tính năng để theo dõi quota: 'ai-listening', 'ai-writing', 'ai-conversation', 'ai-lookup', 'ai-import'
   maxOutputTokens?: number;
   temperature?: number;
   thinkingBudget?: number;
@@ -32,21 +53,78 @@ export interface GeminiCallOptions {
   signal?: AbortSignal;
 }
 
+export interface ResolvedAiCredentials {
+  apiKey: string;
+  model: string;
+  isTrial: boolean;
+  remainingTrialCount?: number;
+}
+
 /**
- * Call Gemini API and parse JSON response.
- * Uses `responseMimeType: 'application/json'` so Gemini returns clean JSON.
+ * Lấy API Key và Model phù hợp:
+ * - Nếu user đã cấu hình key cá nhân -> dùng ngay
+ * - Nếu chưa có key cá nhân -> kiểm tra và trừ quota dùng thử (2 lần/tính năng) từ Admin Key pool
+ */
+export async function resolveGeminiCredentials(featureName = 'ai-general'): Promise<ResolvedAiCredentials> {
+  const userKey = getLocalGeminiKey();
+  if (userKey && userKey.trim().length > 5) {
+    return {
+      apiKey: userKey.trim(),
+      model: getGeminiModel(),
+      isTrial: false,
+    };
+  }
+
+  // Kiểm tra cờ hết lượt nhanh trên client
+  if (isFeatureTrialExhaustedLocal(featureName)) {
+    throw new Error(
+      `Bạn đã hết 2 lượt dùng thử cho tính năng này. Vui lòng nhập Gemini API Key của bạn trong Cài đặt (⚙️) để tiếp tục không giới hạn!`
+    );
+  }
+
+  // Tiêu thụ lượt dùng thử từ Backend
+  try {
+    const trialRes = await aiConfigService.consumeTrialPrompt(featureName);
+    if (!trialRes.allowed || !trialRes.trialApiKey) {
+      throw new Error(
+        trialRes.message ||
+        `Bạn đã dùng hết 2 lượt dùng thử cho tính năng này. Vui lòng thêm Gemini API Key trong Cài đặt (⚙️).`
+      );
+    }
+
+    // Bắn event để UI cập nhật số lượt còn lại
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('ai-trial-updated', {
+          detail: {
+            featureName,
+            remainingTrialCount: trialRes.remainingTrialCount,
+          },
+        })
+      );
+    }
+
+    return {
+      apiKey: trialRes.trialApiKey,
+      model: trialRes.preferredModel || 'gemini-2.5-flash',
+      isTrial: true,
+      remainingTrialCount: trialRes.remainingTrialCount,
+    };
+  } catch (err: any) {
+    throw new Error(
+      err.message || 'Không thể cấp quyền dùng thử. Vui lòng thêm Gemini API Key trong Cài đặt (⚙️).'
+    );
+  }
+}
+
+/**
+ * Gọi Gemini API với cơ chế tự động xoay tua mô hình (Model Fallback Rotation) và parse JSON
  */
 export async function callGeminiJSON<T>(
   prompt: string,
   optionsOrSignal?: GeminiCallOptions | AbortSignal,
   signal?: AbortSignal,
 ): Promise<T> {
-  const key = getGeminiKey();
-  if (!key) {
-    throw new Error('Chưa có Gemini API Key. Vui lòng thêm key trong Cài đặt (⚙️).');
-  }
-
-  // Handle backwards compatibility where 2nd param might be AbortSignal
   let options: GeminiCallOptions | undefined;
   let activeSignal: AbortSignal | undefined = signal;
 
@@ -59,7 +137,11 @@ export async function callGeminiJSON<T>(
     }
   }
 
-  let model = getGeminiModel();
+  const featureName = options?.featureName || 'ai-general';
+  const credentials = await resolveGeminiCredentials(featureName);
+  const key = credentials.apiKey;
+
+  let currentModel = credentials.model || getGeminiModel();
   const temperature = options?.temperature ?? 0.1;
   const maxOutputTokens = options?.maxOutputTokens ?? 8192;
   const thinkingBudget = options?.thinkingBudget !== undefined ? options.thinkingBudget : 0;
@@ -70,7 +152,6 @@ export async function callGeminiJSON<T>(
     responseMimeType: 'application/json',
   };
 
-  // Turn off or configure thinking budget to avoid thinking tokens eating the entire output limit
   if (thinkingBudget !== undefined) {
     generationConfig.thinkingConfig = {
       thinkingBudget,
@@ -88,68 +169,81 @@ export async function callGeminiJSON<T>(
     };
   }
 
-  let url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
-  let res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    signal: activeSignal,
-    body: JSON.stringify(requestBody),
-  });
+  // Xây dựng danh sách model xoay tua (Bắt đầu từ model hiện tại, sau đó qua các model trong chuỗi fallback)
+  const modelsToTry = [
+    currentModel,
+    ...MODEL_ROTATION_CHAIN.filter((m) => m !== currentModel),
+  ];
 
-  // List of fallback models when experiencing high demand (503/429) or model errors
-  const fallbackModels = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+  let lastError: Error | null = null;
+  let successRes: Response | null = null;
 
-  // Handle high demand (503 / 429 / overloaded), not found (404), or bad request (400)
-  if (!res.ok) {
-    const errData = await res.clone().json().catch(() => ({}));
-    const errMsg = (errData as { error?: { message?: string } })?.error?.message || '';
-    const isHighDemand = res.status === 503 || res.status === 429 || errMsg.toLowerCase().includes('high demand') || errMsg.toLowerCase().includes('overloaded') || errMsg.toLowerCase().includes('quota');
-    const isNotFound = res.status === 404 || res.status === 400 || errMsg.includes('not found') || errMsg.includes('not supported');
+  for (let i = 0; i < modelsToTry.length; i++) {
+    const model = modelsToTry[i];
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
 
-    if (isHighDemand || isNotFound) {
-      for (const fallback of fallbackModels) {
-        if (fallback === model) continue;
-        console.warn(`Model ${model} bị quá tải hoặc lỗi (${errMsg || res.status}). Đang tự động chuyển sang thử ${fallback}...`);
-        
-        // Wait 800ms before retrying on fallback model
-        await new Promise((resolve) => setTimeout(resolve, 800));
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: activeSignal,
+        body: JSON.stringify(requestBody),
+      });
 
-        const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/${fallback}:generateContent?key=${key}`;
-        const fallbackRes = await fetch(fallbackUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: activeSignal,
-          body: JSON.stringify(requestBody),
-        });
-
-        if (fallbackRes.ok) {
-          res = fallbackRes;
-          model = fallback;
-          break;
-        }
+      if (res.ok) {
+        successRes = res;
+        break;
       }
+
+      const errData = await res.clone().json().catch(() => ({}));
+      const errMsg = (errData as { error?: { message?: string } })?.error?.message || `HTTP ${res.status}`;
+      
+      const isRetryable =
+        res.status === 429 ||
+        res.status === 503 ||
+        res.status === 500 ||
+        res.status === 404 ||
+        res.status === 400 ||
+        errMsg.toLowerCase().includes('quota') ||
+        errMsg.toLowerCase().includes('high demand') ||
+        errMsg.toLowerCase().includes('overloaded') ||
+        errMsg.toLowerCase().includes('not found') ||
+        errMsg.toLowerCase().includes('not supported') ||
+        errMsg.toLowerCase().includes('resource_exhausted');
+
+      if (isRetryable && i < modelsToTry.length - 1) {
+        console.warn(`[AI Fallback] Model ${model} gặp lỗi (${errMsg}). Tự động xoay tua sang ${modelsToTry[i + 1]}...`);
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        continue;
+      }
+
+      lastError = new Error(`Gemini API lỗi (${model}): ${errMsg}`);
+    } catch (fetchErr: any) {
+      if (fetchErr.name === 'AbortError') {
+        throw fetchErr;
+      }
+      if (i < modelsToTry.length - 1) {
+        console.warn(`[AI Fallback] Lỗi mạng khi gọi ${model}: ${fetchErr.message}. Thử model kế tiếp...`);
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        continue;
+      }
+      lastError = fetchErr;
     }
   }
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    const msg =
-      (err as { error?: { message?: string } }).error?.message ||
-      `HTTP ${res.status}`;
-    throw new Error(`Gemini API lỗi: ${msg}`);
+  if (!successRes) {
+    throw lastError || new Error('Không thể kết nối đến các mô hình AI của Google Gemini. Vui lòng thử lại sau.');
   }
 
-  const data = await res.json();
+  const data = await successRes.json();
   let raw: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
 
-  // Strip markdown fences if Gemini returns them despite responseMimeType
   raw = raw
     .replace(/^```json\s*/i, '')
     .replace(/^```\s*/i, '')
     .replace(/```\s*$/i, '')
     .trim();
 
-  // Try extracting the outermost valid JSON object or array
   const firstBrace = raw.indexOf('{');
   const lastBrace = raw.lastIndexOf('}');
   if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
@@ -159,11 +253,10 @@ export async function callGeminiJSON<T>(
   try {
     return JSON.parse(raw) as T;
   } catch (err) {
-    // Attempt cleaning trailing commas, unescaped characters, or comments
     try {
       const sanitized = raw
-        .replace(/,\s*([\]}])/g, '$1') // remove trailing commas
-        .replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, '$1'); // remove inline comments
+        .replace(/,\s*([\]}])/g, '$1')
+        .replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, '$1');
       return JSON.parse(sanitized) as T;
     } catch {
       console.error('Lỗi parse JSON từ Gemini. Raw content:', raw);
