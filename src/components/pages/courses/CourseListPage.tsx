@@ -38,7 +38,7 @@ export const CourseListPage: React.FC = () => {
   }, [page]);
 
   const handleSelectCourse = (course: Course) => {
-    router.push(`/courses/${course.id}`);
+    router.push(`/courses/${course.slug || course.id}`);
   };
 
   if (loading) {

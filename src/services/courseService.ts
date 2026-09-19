@@ -12,6 +12,7 @@ export interface PaginatedResponse<T> {
 
 export interface Course {
   id: string;
+  slug?: string;
   name: string;
   description: string;
   level: string;
@@ -22,6 +23,7 @@ export interface Course {
 export interface Topic {
   id: string;
   courseId: string;
+  slug?: string;
   name: string;
   description: string;
   orderIndex: number;
@@ -44,6 +46,7 @@ export interface Lesson {
 
 export interface CreateCoursePayload {
   name: string;
+  slug?: string;
   description?: string;
   level?: string;
   imageUrl?: string;
@@ -51,6 +54,7 @@ export interface CreateCoursePayload {
 
 export interface CreateTopicPayload {
   name: string;
+  slug?: string;
   description?: string;
   orderIndex?: number;
   mascotImageUrl?: string;

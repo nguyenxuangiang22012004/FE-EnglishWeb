@@ -53,8 +53,10 @@ export const TopicLearningPage: React.FC<TopicLearningPageProps> = ({ courseId, 
 
   const getTopicProgress = useCallback(
     (): TopicProgress | undefined =>
-      courseProgress?.topicProgresses.find((p) => p.topicId === topicId),
-    [courseProgress, topicId]
+      courseProgress?.topicProgresses.find(
+        (p) => p.topicId === topicId || (topic && p.topicId === topic.id)
+      ),
+    [courseProgress, topicId, topic]
   );
 
   const maxAllowedStep = getTopicProgress()?.currentStep ?? 0;
@@ -81,7 +83,7 @@ export const TopicLearningPage: React.FC<TopicLearningPageProps> = ({ courseId, 
         setCourseProgress(progressData);
 
         const currentTopicProgress = progressData?.topicProgresses.find(
-          (p) => p.topicId === topicId
+          (p) => p.topicId === topicData.id || p.topicId === topicId
         );
 
         if (currentTopicProgress) {
