@@ -164,47 +164,73 @@ export async function generateListeningLesson(
     C1: '200-260',
   };
 
-  const prompt = `You are an expert English listening comprehension test creator for Vietnamese learners.
+  const prompt = `You are a world-class English Listening Examination Designer (specializing in IELTS, TOEIC, and Cambridge assessment frameworks).
 
-TASK: Generate a listening lesson in STRICT JSON format.
+TASK: Create a high-quality listening comprehension lesson in STRICT JSON format that evaluates genuine comprehension (Nghe - Hiểu thực chất) rather than simple superficial keyword spotting.
 
 Topic: "${topic}"
 CEFR Level: ${level}
 Passage length: approximately ${wordCountMap[level]} words
 Number of questions: exactly ${questionCount}
 
-CRITICAL JSON REQUIREMENTS — follow every rule exactly:
-1. Output ONLY a raw JSON object. Do NOT include markdown, code fences (\`\`\`), or any text outside the JSON.
+======================================================================
+CORE PEDAGOGICAL RULES (CRITICAL FOR LISTENING COMPREHENSION):
+======================================================================
+1. PASSAGE DESIGN:
+   - Must sound natural, coherent, and conversational when read aloud by Text-to-Speech (TTS).
+   - Must include realistic nuances, contrasting thoughts, or condition shifts (e.g., "We originally planned to... but due to..., we decided to...").
+   - Match the target CEFR level (${level}) in vocabulary, sentence structures, and speech markers.
+
+2. ANTI-VERBATIM & PARAPHRASING RULE (MANDATORY):
+   - The correct answer option MUST NEVER be a verbatim copy-paste of words from the audio.
+   - It MUST rephrase the idea using synonyms, restructuring, or concept abstraction.
+   - A learner who only listens for raw keyword sounds without understanding the meaning should NOT be able to find the answer.
+
+3. DISTRACTOR KEYWORD TRAPS (MANDATORY):
+   - Distractors (incorrect options) MUST sound plausible and should intentionally reuse some exact words/phrases mentioned in the passage, but distort the meaning (e.g. an idea that was rejected, an earlier outdated plan, opposite effect, or wrong subject).
+   - This tests if the listener truly understood the context rather than merely matching sounds.
+
+4. QUESTION DIVERSITY (Spread across the ${questionCount} questions):
+   - Main Idea / Purpose (e.g., "What is the primary purpose of the talk?", "What main challenge is discussed?")
+   - Paraphrased Detail (e.g., "What led the team to modify their approach?", "How will the project be funded?")
+   - Inference / Tone / Implication (e.g., "What can be inferred about...?", "What is the speaker's attitude towards...?")
+   - Cause & Effect / Reasoning (e.g., "Why was the initial proposal declined?")
+
+5. EXPLANATION:
+   - Provide a clear, educational explanation in English that states the underlying evidence in the passage, explains how the correct answer paraphrases it, and notes why the distractor traps are incorrect.
+
+======================================================================
+CRITICAL JSON FORMAT REQUIREMENTS:
+======================================================================
+1. Output ONLY a valid raw JSON object. Do NOT include markdown blocks (\`\`\`json), comments, or text outside the JSON.
 2. The root object must have exactly these 4 keys: "title", "passage", "passageVi", "questions".
-3. "title": a string, 5–8 words describing the passage topic.
-4. "passage": a string containing the full English passage. Must be natural and clear for TTS. No markdown inside.
-5. "passageVi": a string containing the complete Vietnamese translation of the passage. Translate naturally and fluently. Match sentence count and order with the English passage. No markdown inside.
-6. "questions": a JSON array of exactly ${questionCount} objects. Each object must have:
-   - "id": an integer starting from 1 (e.g., 1, 2, 3...)
-   - "question": a string with the question text
-   - "options": a JSON array of EXACTLY 4 strings. Each string MUST start with the letter prefix exactly as shown: "A. ", "B. ", "C. ", "D. " (capital letter, period, space). Example: ["A. London", "B. Paris", "C. Tokyo", "D. Sydney"]
-   - "answer": a single UPPERCASE letter string — ONLY one of: "A", "B", "C", or "D". No other characters.
-   - "explanation": a string with a one-sentence explanation of why the answer is correct.
+3. "title": a concise string (4–8 words) summarizing the theme.
+4. "passage": the complete English listening script. No markdown tags inside.
+5. "passageVi": natural, accurate, sentence-by-sentence Vietnamese translation of the passage.
+6. "questions": a JSON array of exactly ${questionCount} question objects. Each object must have:
+   - "id": number (1, 2, 3...)
+   - "question": string (clear question testing comprehension)
+   - "options": JSON array of exactly 4 strings, each starting with "A. ", "B. ", "C. ", "D. "
+   - "answer": string, strictly one of: "A", "B", "C", "D"
+   - "explanation": string, explaining the paraphrase and context clues
 
-WHAT NOT TO DO:
-- Do NOT wrap the JSON in any extra object or array
-- Do NOT add any keys other than the ones specified
-- Do NOT use "Answer: A" or "(A)" format — only a single character like "A"
-- Do NOT leave any field empty or null
-- Do NOT add any commentary before or after the JSON
-
-EXAMPLE of valid output (use this exact structure):
+EXAMPLE OF TRUE COMPREHENSION TEST:
 {
-  "title": "Daily Life at a Coffee Shop",
-  "passage": "Every morning, Sara visits the small coffee shop on Maple Street. She orders a latte and reads the newspaper before heading to work.",
-  "passageVi": "Mỗi sáng, Sara đến quán cà phê nhỏ trên phố Maple. Cô gọi một ly latte và đọc báo trước khi đi làm.",
+  "title": "Renovating the Downtown Public Library",
+  "passage": "Good morning staff. Although we initially hoped to keep the reading rooms open during the upcoming renovation, the contractor warned that noise levels and dust would create an unsafe environment. Therefore, the entire facility will temporarily close starting next Monday for two weeks. During this period, all loan deadlines will be automatically extended, so patrons will not incur any overdue penalties.",
+  "passageVi": "Chào buổi sáng toàn thể nhân viên. Mặc dù ban đầu chúng tôi hy vọng giữ cho các phòng đọc mở cửa trong đợt tu sửa sắp tới, nhưng nhà thầu đã cảnh báo rằng tiếng ồn và bụi bặm sẽ gây ra môi trường không an toàn. Do đó, toàn bộ cơ sở sẽ tạm thời đóng cửa bắt đầu từ thứ Hai tuần tới trong hai tuần. Trong thời gian này, tất cả hạn trả sách sẽ tự động được gia hạn, vì vậy bạn đọc sẽ không phải chịu bất kỳ khoản phạt quá hạn nào.",
   "questions": [
     {
       "id": 1,
-      "question": "Where does Sara visit every morning?",
-      "options": ["A. A bakery on Oak Street", "B. A coffee shop on Maple Street", "C. A library on Pine Avenue", "D. A park near her home"],
-      "answer": "B",
-      "explanation": "The passage states that Sara visits the coffee shop on Maple Street every morning."
+      "question": "What is the primary reason for completely shutting down the building?",
+      "options": [
+        "A. Hazardous conditions reported by the construction team",
+        "B. Low visitor attendance in the reading rooms",
+        "C. Severe financial penalties on overdue book loans",
+        "D. An urgent plan to replace the library staff"
+      ],
+      "answer": "A",
+      "explanation": "The speaker mentions the contractor warned of unsafe noise and dust, which is paraphrased as 'hazardous conditions reported by the construction team'. Options mentioning overdue penalties or reading rooms are traps using passage keywords in wrong contexts."
     }
   ]
 }`;
@@ -212,7 +238,7 @@ EXAMPLE of valid output (use this exact structure):
   const parsed = await callGeminiJSON<unknown>(prompt, {
     featureName: 'ai-listening',
     temperature: 0.7,
-    maxOutputTokens: 2048,
+    maxOutputTokens: 2500,
   });
 
   const normalized = validateAndNormalize(parsed, topic, level, questionCount);

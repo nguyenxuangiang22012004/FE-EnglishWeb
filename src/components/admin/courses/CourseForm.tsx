@@ -22,9 +22,23 @@ export const CourseForm: React.FC<CourseFormProps> = ({
   backHref,
 }) => {
   const [name, setName] = useState(initialData?.name || '');
+  const [slug, setSlug] = useState(initialData?.slug || '');
   const [description, setDescription] = useState(initialData?.description || '');
   const [level, setLevel] = useState(initialData?.level || 'Beginner');
   const [imageUrl, setImageUrl] = useState(initialData?.imageUrl || '');
+
+  const generateSlugFromName = () => {
+    if (!name.trim()) return;
+    const clean = name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[đĐ]/g, 'd')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .trim()
+      .replace(/\s+/g, '-');
+    setSlug(clean);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,6 +48,7 @@ export const CourseForm: React.FC<CourseFormProps> = ({
     }
     onSubmit({
       name: name.trim(),
+      slug: slug.trim() || undefined,
       description: description.trim(),
       level: level.trim(),
       imageUrl: imageUrl.trim(),
@@ -63,6 +78,35 @@ export const CourseForm: React.FC<CourseFormProps> = ({
           onChange={(e) => setName(e.target.value)}
           className="w-full bg-surface-900 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-red-500 transition-colors placeholder-slate-600"
         />
+      </div>
+
+      {/* Slug / Đường dẫn tĩnh */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-semibold text-slate-200">
+            Đường dẫn tĩnh (Slug / URL)
+          </label>
+          <button
+            type="button"
+            onClick={generateSlugFromName}
+            className="text-xs text-orange-400 hover:text-orange-300 font-medium transition-colors"
+          >
+            ⚡ Tạo từ tên
+          </button>
+        </div>
+        <div className="flex items-center bg-surface-900 border border-white/10 rounded-xl px-4 py-2.5 focus-within:border-red-500 transition-colors">
+          <span className="text-xs text-slate-500 mr-1 select-none">/courses/</span>
+          <input
+            type="text"
+            placeholder="vd: beginner, giao-tiep-co-ban"
+            value={slug}
+            onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
+            className="w-full bg-transparent text-sm text-white focus:outline-none placeholder-slate-600"
+          />
+        </div>
+        <p className="text-xs text-slate-500">
+          Đường dẫn ngắn gọn hiển thị trên trình duyệt. Để trống hệ thống sẽ tự động gán.
+        </p>
       </div>
 
       {/* Level */}
